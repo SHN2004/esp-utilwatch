@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 600" font-family="Helvetica, Arial, sans-serif">
+  <rect width="860" height="600" fill="#fbfaf7"/>
+  <text x="30" y="30" font-size="20" font-weight="700" fill="#222">Button wiring</text>
+  <text x="30" y="50" font-size="12" fill="#666">OLED stays as it is · buttons go GPIO → button → GND</text>
+
+  <!-- ===== OLED wires (existing) ===== -->
+  <g fill="none" stroke-width="3" stroke-linejoin="round">
+    <polyline points="200,180 245,180 245,172 330,172" stroke="#e5484d"/>           <!-- VCC -> 3V3 -->
+    <polyline points="200,210 265,210 265,136 330,136" stroke="#444"/>              <!-- GND -> GND -->
+    <polyline points="200,240 280,240 280,208 330,208" stroke="#e0a800"/>           <!-- SCL -> 20 -->
+    <polyline points="200,270 300,270 300,244 330,244" stroke="#2f80ed"/>           <!-- SDA -> 19 -->
+  </g>
+
+  <!-- ===== GND to buttons: over the top of the board to a GND rail ===== -->
+  <polyline points="330,136 315,136 315,58 740,58 740,443" fill="none" stroke="#444" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="315" cy="136" r="4" fill="#444"/>
+  <text x="748" y="92" font-size="12" font-weight="700" fill="#444">GND rail</text>
+  <text x="748" y="106" font-size="11" fill="#666">(breadboard − strip)</text>
+
+  <!-- ===== Button signal wires ===== -->
+  <g fill="none" stroke-width="3" stroke-linejoin="round">
+    <polyline points="470,316 510,316 510,122 612,122" stroke="#2fa36b"/>   <!-- GPIO4 UP -->
+    <polyline points="470,352 535,352 535,212 612,212" stroke="#8e5bd8"/>   <!-- GPIO5 DOWN -->
+    <polyline points="470,388 560,388 560,302 612,302" stroke="#e07b2f"/>   <!-- GPIO6 SEL -->
+    <polyline points="470,424 585,424 585,392 612,392" stroke="#1fa2b8"/>   <!-- GPIO7 BACK -->
+  </g>
+  <!-- bottom-right legs to the GND rail -->
+  <g stroke="#444" stroke-width="3">
+    <line x1="668" y1="178" x2="740" y2="178"/>
+    <line x1="668" y1="268" x2="740" y2="268"/>
+    <line x1="668" y1="358" x2="740" y2="358"/>
+    <line x1="668" y1="443" x2="740" y2="443"/>
+  </g>
+  <g fill="#444">
+    <circle cx="740" cy="178" r="4"/><circle cx="740" cy="268" r="4"/>
+    <circle cx="740" cy="358" r="4"/><circle cx="740" cy="443" r="4"/>
+  </g>
+
+  <!-- ===== OLED module ===== -->
+  <rect x="40" y="150" width="160" height="150" rx="8" fill="#1d3557"/>
+  <rect x="56" y="170" width="100" height="56" rx="3" fill="#05070a"/>
+  <text x="106" y="203" font-size="11" fill="#5ab4ff" text-anchor="middle">SH1106</text>
+  <text x="56" y="250" font-size="12" font-weight="700" fill="#fff">1.3" OLED</text>
+  <text x="56" y="266" font-size="11" fill="#cbd5e1">already wired</text>
+  <g font-size="11" fill="#fff" text-anchor="end" font-weight="700">
+    <text x="192" y="184">VCC</text><text x="192" y="214">GND</text>
+    <text x="192" y="244">SCL</text><text x="192" y="274">SDA</text>
+  </g>
+  <g fill="#d4af37"><circle cx="200" cy="180" r="5"/><circle cx="200" cy="210" r="5"/><circle cx="200" cy="240" r="5"/><circle cx="200" cy="270" r="5"/></g>
+
+  <!-- ===== ESP32-C6 SuperMini ===== -->
+  <rect x="380" y="62" width="40" height="22" rx="6" fill="#999"/>
+  <text x="400" y="77" font-size="9" fill="#fff" text-anchor="middle">USB-C</text>
+  <rect x="330" y="80" width="140" height="364" rx="10" fill="#5b3a8c"/>
+  <text x="400" y="460" font-size="12" font-weight="700" fill="#5b3a8c" text-anchor="middle">ESP32-C6 SuperMini</text>
+  <!-- side B (left) -->
+  <g font-size="11" fill="#fff" font-weight="700">
+    <text x="342" y="104">5V</text><text x="342" y="140">GND</text><text x="342" y="176">3V3</text>
+    <text x="342" y="212">20</text><text x="342" y="248">19</text><text x="342" y="284" opacity=".5">18</text>
+    <text x="342" y="320" opacity=".5">15</text><text x="342" y="356" opacity=".5">14</text>
+    <text x="342" y="392" opacity=".5">9</text><text x="342" y="428" opacity=".5">8</text>
+  </g>
+  <!-- side A (right) -->
+  <g font-size="11" fill="#fff" font-weight="700" text-anchor="end">
+    <text x="458" y="104" opacity=".5">TX</text><text x="458" y="140" opacity=".5">RX</text>
+    <text x="458" y="176" opacity=".5">0</text><text x="458" y="212" opacity=".5">1</text>
+    <text x="458" y="248" opacity=".5">2</text><text x="458" y="284" opacity=".5">3</text>
+    <text x="458" y="320">4</text><text x="458" y="356">5</text>
+    <text x="458" y="392">6</text><text x="458" y="428">7</text>
+  </g>
+  <g fill="#d4af37">
+    <circle cx="330" cy="100" r="5" opacity=".4"/><circle cx="330" cy="136" r="5"/><circle cx="330" cy="172" r="5"/>
+    <circle cx="330" cy="208" r="5"/><circle cx="330" cy="244" r="5"/><circle cx="330" cy="280" r="5" opacity=".4"/>
+    <circle cx="330" cy="316" r="5" opacity=".4"/><circle cx="330" cy="352" r="5" opacity=".4"/>
+    <circle cx="330" cy="388" r="5" opacity=".4"/><circle cx="330" cy="424" r="5" opacity=".4"/>
+    <circle cx="470" cy="100" r="5" opacity=".4"/><circle cx="470" cy="136" r="5" opacity=".4"/>
+    <circle cx="470" cy="172" r="5" opacity=".4"/><circle cx="470" cy="208" r="5" opacity=".4"/>
+    <circle cx="470" cy="244" r="5" opacity=".4"/><circle cx="470" cy="280" r="5" opacity=".4"/>
+    <circle cx="470" cy="316" r="5"/><circle cx="470" cy="352" r="5"/>
+    <circle cx="470" cy="388" r="5"/><circle cx="470" cy="424" r="5"/>
+  </g>
+
+  <!-- ===== Buttons (12x12 tactile, 4 legs) ===== -->
+  <g id="btns">
+    <g transform="translate(640,150)">
+      <rect x="-28" y="-28" width="56" height="56" rx="6" fill="#e4e1db" stroke="#888" stroke-width="2"/>
+      <circle r="14" fill="#333"/>
+      <circle cx="-28" cy="-28" r="6" fill="#2fa36b"/><circle cx="28" cy="28" r="6" fill="#444"/>
+      <circle cx="28" cy="-28" r="5" fill="#bbb"/><circle cx="-28" cy="28" r="5" fill="#bbb"/>
+      <text x="0" y="-38" font-size="12" font-weight="700" fill="#2fa36b" text-anchor="middle">UP · GPIO 4</text>
+    </g>
+    <g transform="translate(640,240)">
+      <rect x="-28" y="-28" width="56" height="56" rx="6" fill="#e4e1db" stroke="#888" stroke-width="2"/>
+      <circle r="14" fill="#333"/>
+      <circle cx="-28" cy="-28" r="6" fill="#8e5bd8"/><circle cx="28" cy="28" r="6" fill="#444"/>
+      <circle cx="28" cy="-28" r="5" fill="#bbb"/><circle cx="-28" cy="28" r="5" fill="#bbb"/>
+      <text x="0" y="-38" font-size="12" font-weight="700" fill="#8e5bd8" text-anchor="middle">DOWN · GPIO 5</text>
+    </g>
+    <g transform="translate(640,330)">
+      <rect x="-28" y="-28" width="56" height="56" rx="6" fill="#e4e1db" stroke="#888" stroke-width="2"/>
+      <circle r="14" fill="#333"/>
+      <circle cx="-28" cy="-28" r="6" fill="#e07b2f"/><circle cx="28" cy="28" r="6" fill="#444"/>
+      <circle cx="28" cy="-28" r="5" fill="#bbb"/><circle cx="-28" cy="28" r="5" fill="#bbb"/>
+      <text x="0" y="-38" font-size="12" font-weight="700" fill="#e07b2f" text-anchor="middle">SELECT · GPIO 6</text>
+    </g>
+    <g transform="translate(640,415)">
+      <rect x="-28" y="-28" width="56" height="56" rx="6" fill="#e4e1db" stroke="#888" stroke-width="2"/>
+      <circle r="14" fill="#333"/>
+      <circle cx="-28" cy="-28" r="6" fill="#1fa2b8"/><circle cx="28" cy="28" r="6" fill="#444"/>
+      <circle cx="28" cy="-28" r="5" fill="#bbb"/><circle cx="-28" cy="28" r="5" fill="#bbb"/>
+      <text x="0" y="-36" font-size="12" font-weight="700" fill="#1fa2b8" text-anchor="middle">BACK · GPIO 7</text>
+    </g>
+  </g>
+
+  <!-- ===== Inset: inside a 4-leg button ===== -->
+  <g transform="translate(30,330)">
+    <rect width="270" height="240" rx="10" fill="#fff" stroke="#ddd"/>
+    <text x="16" y="26" font-size="13" font-weight="700" fill="#222">Inside a 4-leg button</text>
+    <g transform="translate(70,105)">
+      <rect x="-34" y="-34" width="68" height="68" rx="6" fill="#e4e1db" stroke="#888" stroke-width="2"/>
+      <line x1="-34" y1="-34" x2="34" y2="-34" stroke="#e5484d" stroke-width="4"/>
+      <line x1="-34" y1="34" x2="34" y2="34" stroke="#2f80ed" stroke-width="4"/>
+      <line x1="0" y1="-30" x2="0" y2="30" stroke="#333" stroke-width="2" stroke-dasharray="4 4"/>
+      <circle cx="-34" cy="-34" r="6" fill="#e5484d"/><circle cx="34" cy="-34" r="6" fill="#e5484d"/>
+      <circle cx="-34" cy="34" r="6" fill="#2f80ed"/><circle cx="34" cy="34" r="6" fill="#2f80ed"/>
+    </g>
+    <g font-size="11.5" fill="#444">
+      <text x="128" y="70">Legs come in 2 pairs</text>
+      <text x="128" y="85">that are always joined</text>
+      <text x="128" y="100">inside (red, blue).</text>
+      <text x="128" y="122">Pressing joins the</text>
+      <text x="128" y="137">pairs (dashed line).</text>
+    </g>
+    <g font-size="11.5" fill="#222">
+      <text x="16" y="172" font-weight="700">Use diagonal legs.</text>
+      <text x="16" y="188">They're always on different pairs,</text>
+      <text x="16" y="204">so it works however the button turns.</text>
+      <text x="16" y="224" fill="#666">Unsure? Multimeter beep mode finds the pairs.</text>
+    </g>
+  </g>
+
+  <!-- ===== Notes ===== -->
+  <g font-size="12" fill="#444">
+    <text x="470" y="500" font-weight="700" fill="#222">On the breadboard</text>
+    <text x="470" y="518">• Each button straddles the center gap, like a chip.</text>
+    <text x="470" y="535">• GPIO wire → top-left leg, GND → bottom-right leg.</text>
+    <text x="470" y="552">• No resistors: the ESP32's internal pull-ups are used.</text>
+    <text x="470" y="569">• Pin order follows your notes; trust the board's labels.</text>
+  </g>
+</svg>

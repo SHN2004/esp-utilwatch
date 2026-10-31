@@ -9,3 +9,4 @@ case/build/
 fp-info-cache
 ~*.lck
 kicad/board/fab/utilwatch-gerbers/
+kicad/carrier/fab/gerbers/

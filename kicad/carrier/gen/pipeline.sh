@@ -9,7 +9,7 @@ PY=/Applications/KiCad/KiCad.app/Contents/Frameworks/Python.framework/Versions/3
 K=/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli
 JAVA=$(brew --prefix openjdk)/bin/java
 ROUTE=$C/../board/gen/route.py
-quiet() { grep -v -i "fontconfig\|wxApp\|memory leak" || true; }
+quiet() { grep -v -i "fontconfig\|wxApp\|memory leak\|Rendering" || true; }
 $PY $G/build_carrier.py $B 2>&1 | quiet
 $PY $ROUTE dsn $B $T/board.dsn 2>&1 | quiet
 (cd $T && $JAVA -jar ~/.local/share/freerouting/freerouting-2.5.0.jar -de board.dsn -do board.ses -mp 60 --gui.enabled=false > fr.log 2>&1)
@@ -21,5 +21,9 @@ rm -rf $C/fab && mkdir -p $C/fab/gerbers
 "$K" pcb export gerbers $B -o $C/fab/gerbers/ --layers F.Cu,B.Cu,F.Mask,B.Mask,F.Silkscreen,B.Silkscreen,Edge.Cuts >/dev/null 2>&1
 "$K" pcb export drill $B -o $C/fab/gerbers/ >/dev/null 2>&1
 (cd $C/fab/gerbers && zip -q ../utilwatch-carrier-gerbers.zip *)
-"$K" pcb export pdf $B -o $C/fab/fit-check-1to1.pdf --layers F.Fab,F.Courtyard,Edge.Cuts,F.Silkscreen,F.Cu --mode-single >/dev/null 2>&1
+"$K" pcb export pdf $B -o $C/fab/fit-check-1to1.pdf --layers F.Fab,F.Courtyard,Edge.Cuts,F.Silkscreen --mode-single >/dev/null 2>&1
+render() { "$K" pcb render $B -w 1200 -h 1200 --quality high --floor "$@" 2>&1 | quiet; }
+render -o $C/render-top.png --side top
+render -o $C/render-back.png --side bottom
+render -o $C/render-angle.png --rotate -45,0,45 --perspective --zoom 0.9
 echo "fab: $(ls $C/fab)"

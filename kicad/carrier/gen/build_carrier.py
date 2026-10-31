@@ -3,8 +3,8 @@
 # pipeline.sh then routes it with Freerouting.
 #   build_carrier.py <out.kicad_pcb>
 # On the board: ESP32-C6 SuperMini (on its pin headers), the OLED's 4-pin header, 4 right-angle
-# 6x6 mm buttons, 2 resistors + 1 capacitor (through-hole), pads for a slide switch and for the
-# TP4056 module's OUT+/OUT- wires. The battery solders to the TP4056, not to this board.
+# 6x6 mm buttons, 2 resistors + 1 capacitor (through-hole), a right-angle SS-12F23 slide switch at
+# the bottom edge, and pads for the TP4056 module's OUT+/OUT- wires. The battery solders to the TP4056, not to this board.
 import sys
 import pcbnew
 
@@ -29,7 +29,7 @@ NETS = {  # (ref, pin) -> net, from kicad/perfboard (same circuit)
     ("U1", "11"): "VSYS", ("U1", "12"): "GND", ("U1", "13"): "3V3", ("U1", "14"): "SCL",
     ("U1", "15"): "SDA", ("U1", "3"): "VBAT_SENSE", ("U1", "7"): "BTN_UP", ("U1", "8"): "BTN_DOWN",
     ("U1", "9"): "BTN_SELECT", ("U1", "10"): "BTN_BACK",
-    ("J1", "1"): "GND", ("J1", "2"): "3V3", ("J1", "3"): "SCL", ("J1", "4"): "SDA",   # OLED
+    ("J1", "1"): "3V3", ("J1", "2"): "GND", ("J1", "3"): "SCL", ("J1", "4"): "SDA",   # OLED, VCC GND SCL SDA as printed on the module
     ("SW2", "1"): "BTN_UP", ("SW3", "1"): "BTN_DOWN", ("SW4", "1"): "BTN_SELECT", ("SW5", "1"): "BTN_BACK",
     ("SW2", "2"): "GND", ("SW3", "2"): "GND", ("SW4", "2"): "GND", ("SW5", "2"): "GND",
     ("R1", "1"): "VSYS", ("R1", "2"): "VBAT_SENSE", ("R2", "1"): "VBAT_SENSE", ("R2", "2"): "GND",
@@ -49,7 +49,6 @@ PARTS = {
     "R1": ("Resistor_THT", "R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical", "100k", 9.5, 25.0, 0),
     "R2": ("Resistor_THT", "R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical", "100k", 9.5, 28.0, 0),
     "C1": ("Capacitor_THT", "C_Disc_D3.0mm_W2.0mm_P2.50mm", "100nF", 9.5, 31.0, 0),
-    "SW1": ("Connector_PinHeader_2.54mm", "PinHeader_1x03_P2.54mm_Vertical", "Power switch", 17.0, 30.0, 90),
     "J2": ("Connector_PinHeader_2.54mm", "PinHeader_1x02_P2.54mm_Vertical", "TP4056 OUT", 17.0, 24.8, 90),
 }
 
@@ -109,6 +108,46 @@ def supermini(board):
     return fp
 
 
+def slide_switch(board):
+    """SS-12F23 right-angle slide switch on the bottom edge, knob out through the case. Three pins at
+    3.0 mm plus a mounting tab at each end of the body. The tab spots come from the vendor drawing,
+    not a measured part, so they are slots: check them on the fit-check print before ordering."""
+    fp = pcbnew.FOOTPRINT(board)
+    fp.SetFPID(pcbnew.LIB_ID("utilwatch", "SW_Slide_SS-12F23_Angled"))
+    fp.SetReference("SW1")
+    fp.SetValue("Power switch")
+    fp.SetPosition(P(0, 0))
+    cx, cy = 20.0, 33.0        # pin row; the knob face is ~3.3 mm toward the edge, i.e. at the edge
+    for i in range(3):
+        pad = pcbnew.PAD(fp)
+        pad.SetNumber(str(i + 1))
+        pad.SetAttribute(pcbnew.PAD_ATTRIB_PTH)
+        pad.SetLayerSet(pad.PTHMask())
+        pad.SetShape(pcbnew.F_Cu, pcbnew.PAD_SHAPE_CIRCLE)
+        pad.SetSize(pcbnew.F_Cu, pcbnew.VECTOR2I(mm(1.7), mm(1.7)))
+        pad.SetDrillSize(pcbnew.VECTOR2I(mm(1.0), mm(1.0)))
+        pad.SetPosition(P(cx + (i - 1) * 3.0, cy))
+        fp.Add(pad)
+    for sx in (-6.2, 6.2):     # mounting tabs: 0.45 mm sheet metal, long axis toward the edge
+        pad = pcbnew.PAD(fp)
+        pad.SetNumber("")
+        pad.SetAttribute(pcbnew.PAD_ATTRIB_PTH)
+        pad.SetLayerSet(pad.PTHMask())
+        pad.SetShape(pcbnew.F_Cu, pcbnew.PAD_SHAPE_OVAL)
+        pad.SetSize(pcbnew.F_Cu, pcbnew.VECTOR2I(mm(1.6), mm(2.6)))
+        pad.SetDrillShape(pcbnew.PAD_DRILL_SHAPE_OBLONG)
+        pad.SetDrillSize(pcbnew.VECTOR2I(mm(0.8), mm(1.8)))
+        pad.SetPosition(P(cx + sx, cy))
+        fp.Add(pad)
+    rect(fp, pcbnew.F_Fab, cx - 6.45, cy - 2.2, cx + 6.45, cy + 3.3, 0.1)       # body, face at the edge
+    rect(fp, pcbnew.F_Fab, cx - 1.5, cy + 3.3, cx + 1.5, cy + 8.3, 0.1)         # 5 mm knob, mid-travel
+    rect(fp, pcbnew.F_CrtYd, cx - 6.7, cy - 2.45, cx + 6.7, cy + 3.55, 0.05)
+    fp.Reference().SetVisible(False)
+    fp.Value().SetVisible(False)
+    board.Add(fp)
+    return fp
+
+
 board = pcbnew.CreateEmptyBoard()
 board.SetCopperLayerCount(2)
 ds = board.GetDesignSettings()
@@ -119,7 +158,7 @@ for name in sorted(set(NETS.values())):
     nets[name] = pcbnew.NETINFO_ITEM(board, name)
     board.Add(nets[name])
 
-fps = {"U1": supermini(board)}
+fps = {"U1": supermini(board), "SW1": slide_switch(board)}
 for ref, (lib, name, value, x, y, rot) in PARTS.items():
     fp = pcbnew.FootprintLoad(f"{FPDIR}/{lib}.pretty", name)
     fp.SetReference(ref)
@@ -188,7 +227,7 @@ def silk(s, x, y, size=0.8, layer=pcbnew.F_SilkS):
 
 
 B = pcbnew.B_SilkS  # the top side is covered by the SuperMini and OLED: labels go on the back
-silk("GND VCC SCL SDA", 17.0, 0.9, 0.7, B)
+silk("VCC GND SCL SDA", 17.0, 0.9, 0.7, B)
 silk("UP", 27.0, 8.6, 0.8, B)
 silk("SEL", 26.9, 18.0, 0.8, B)
 silk("DOWN", 26.7, 29.0, 0.8, B)
@@ -196,10 +235,10 @@ silk("BACK", 4.2, 34.4, 0.7, B)
 silk("TP4056", 23.0, 24.8, 0.6, B)
 silk("+", 17.0, 26.9, 0.8, B)
 silk("-", 19.54, 26.9, 0.8, B)
-silk("SWITCH", 19.5, 32.6, 0.6, B)
+silk("SWITCH", 20.0, 31.2, 0.6, B)
 for y, v in ((25.0, "100k"), (28.0, "100k"), (31.0, "100n")):
     silk(v, 14.6, y, 0.6, B)
-silk("UtilWatch carrier v0.1", 17.0, 34.5, 0.7, B)
+silk("UtilWatch carrier v0.1", 17.0, 35.1, 0.7, B)
 
 board.SetFileName(OUT)
 pcbnew.SaveBoard(OUT, board)

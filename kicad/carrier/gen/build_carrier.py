@@ -2,7 +2,7 @@
 # solder onto (the perfboard build in kicad/perfboard, as a PCB). Run with KiCad's own Python;
 # pipeline.sh then routes it with Freerouting.
 #   build_carrier.py <out.kicad_pcb>
-# On the board: ESP32-C6 SuperMini (on its pin headers), the OLED's 4-pin header, 4 right-angle
+# On the board: ESP32-C6 SuperMini (on its pin headers), the OLED's 4-pin header, 3 right-angle
 # 6x6 mm buttons, 2 resistors + 1 capacitor (through-hole), a right-angle SS-12F23 slide switch at
 # the bottom edge, and pads for the TP4056 module's OUT+/OUT- wires. The battery solders to the TP4056, not to this board.
 import sys
@@ -28,26 +28,27 @@ SM_BOTTOM = ["TX", "RX", "0", "1", "2", "3", "4", "5", "6", "7"]          # pins
 NETS = {  # (ref, pin) -> net, from kicad/perfboard (same circuit)
     ("U1", "11"): "VSYS", ("U1", "12"): "GND", ("U1", "13"): "3V3", ("U1", "14"): "SCL",
     ("U1", "15"): "SDA", ("U1", "3"): "VBAT_SENSE", ("U1", "7"): "BTN_UP", ("U1", "8"): "BTN_DOWN",
-    ("U1", "9"): "BTN_SELECT", ("U1", "10"): "BTN_BACK",
+    ("U1", "9"): "BTN_SELECT",   # pin 10 (GPIO7) is free: Back is a long press of Select
     ("J1", "1"): "3V3", ("J1", "2"): "GND", ("J1", "3"): "SCL", ("J1", "4"): "SDA",   # OLED, VCC GND SCL SDA as printed on the module
-    ("SW2", "1"): "BTN_UP", ("SW3", "1"): "BTN_DOWN", ("SW4", "1"): "BTN_SELECT", ("SW5", "1"): "BTN_BACK",
-    ("SW2", "2"): "GND", ("SW3", "2"): "GND", ("SW4", "2"): "GND", ("SW5", "2"): "GND",
+    ("SW2", "1"): "BTN_UP", ("SW3", "1"): "BTN_DOWN", ("SW4", "1"): "BTN_SELECT",
+    ("SW2", "2"): "GND", ("SW3", "2"): "GND", ("SW4", "2"): "GND",
     ("R1", "1"): "VSYS", ("R1", "2"): "VBAT_SENSE", ("R2", "1"): "VBAT_SENSE", ("R2", "2"): "GND",
     ("C1", "1"): "VBAT_SENSE", ("C1", "2"): "GND",
     ("SW1", "3"): "VSYS", ("SW1", "2"): "VOUT",        # pin 1 (the switch's other throw) is unused
     ("J2", "1"): "VOUT", ("J2", "2"): "GND",           # TP4056 OUT+ / OUT-
 }
 
-# All four buttons on the right edge (the hand side on a left wrist), at 8.8 mm pitch: a bracket
-# is ~8.3 mm along the edge, so they nearly touch. The left edge is the USB-C plus the SuperMini's
-# pin row, which leaves no room for the slider there; it goes on the bottom edge at the left end.
-BUTTONS = (("SW2", "Up", 2.55), ("SW4", "Select", 11.35), ("SW3", "Down", 20.15), ("SW5", "Back", 28.95))
+# Three buttons on the right edge (the hand side on a left wrist) at 11 mm pitch, so a thumb finds
+# each one without looking. Back is a long press of Select, firmware-wide (see remote/remote.ino),
+# so there is no fourth button. The left edge is the USB-C plus the SuperMini's pin row, which
+# leaves no room for the slider there; it goes on the bottom edge at the left end.
+BUTTONS = (("SW2", "Up", 4.75), ("SW4", "Select", 15.75), ("SW3", "Down", 26.75))
 
 # ref -> (library, footprint, value, x, y, rotation). Board coords: origin top-left, y down.
 # The right-angle buttons' actuators point away from the board at rotation -90 (right) / 90 (left).
 PARTS = {
     "J1": ("Connector_PinHeader_2.54mm", "PinHeader_1x04_P2.54mm_Vertical", "OLED", 13.19, 2.25, 90),
-    # The four buttons are in BUTTONS below; the power slider is built in slide_switch().
+    # The three buttons are in BUTTONS below; the power slider is built in slide_switch().
     "R1": ("Resistor_THT", "R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical", "100k", 23.0, 25.0, 0),
     "R2": ("Resistor_THT", "R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical", "100k", 23.0, 28.0, 0),
     "C1": ("Capacitor_THT", "C_Disc_D3.0mm_W2.0mm_P2.50mm", "100nF", 23.0, 31.0, 0),
@@ -125,7 +126,7 @@ def npth(fp, x, y, d):
 def button(board, ref, value, x, y, rot):
     """6x6 right-angle tactile switch with bracket (Daier KFC-A06W1, C&K PTS645Vx31, Omron
     B3F-315x): pins 4.5 mm apart, bracket legs 7 mm apart 2.5 mm behind them. Same holes as KiCad's
-    Omron footprint, but the leg holes are unplated and the courtyard is tight, so four fit on one
+    Omron footprint, but the leg holes are unplated and the courtyard is tight, so three fit on one
     edge. Built with the actuator pointing -y, then rotated about pin 1."""
     fp = pcbnew.FOOTPRINT(board)
     fp.SetFPID(pcbnew.LIB_ID("utilwatch", "SW_Tactile_6mm_Angled_Bracket"))
@@ -289,10 +290,9 @@ def silk(s, x, y, size=0.8, layer=pcbnew.F_SilkS, angle=0):
 
 B = pcbnew.B_SilkS  # the top side is covered by the SuperMini and OLED: labels go on the back
 silk("VCC GND SCL SDA", 17.0, 0.9, 0.7, B)
-silk("UP", 28.0, 4.7, 0.8, B)
-silk("SEL", 28.0, 13.5, 0.8, B)
-silk("DOWN", 28.0, 22.3, 0.8, B)
-silk("BACK", 28.0, 31.1, 0.8, B)
+silk("UP", 28.0, 6.9, 0.8, B)
+silk("SEL", 28.0, 17.9, 0.8, B)
+silk("DOWN", 28.0, 28.9, 0.8, B)
 silk("TP4056", 15.2, 26.1, 0.6, B, 90)
 silk("+", 17.0, 26.9, 0.8, B)
 silk("-", 19.54, 26.9, 0.8, B)

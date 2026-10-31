@@ -1,0 +1,249 @@
+<meta charset="utf-8">
+<title>UtilWatch Assembly</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: the model fills the screen; a drafting-style panel (controls, parts, title block) sits at the side, under it on phones. */
+  :root {
+    --bg: #eef1f4;
+    --panel: #f8f9fb;
+    --fg: #1b2129;
+    --muted: #5c6773;
+    --rule: #cfd6de;
+    --accent: #1f7fc9;
+    --sel: #e08a1e;
+    --font-label: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    --font-data: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b; --panel: #181d23; --fg: #e4e9ef; --muted: #96a1ad; --rule: #2c343e; --accent: #4fa6ec; --sel: #f0a040;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b; --panel: #181d23; --fg: #e4e9ef; --muted: #96a1ad; --rule: #2c343e; --accent: #4fa6ec; --sel: #f0a040;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-label); font-size: 16px; }
+  .app { display: grid; grid-template-columns: minmax(0, 1fr) 320px; height: 100%; }
+  .stage { position: relative; min-width: 0; min-height: 0; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .hint { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); bottom: 14px; margin: 0;
+          font: 400 12px var(--font-data); color: var(--muted); }
+  .status[hidden] { display: none; }
+  .status { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font: 400 14px var(--font-data); text-align: center; padding-inline: 24px; }
+  aside { background: var(--panel); border-left: 1px solid var(--rule); overflow-y: auto; display: flex; flex-direction: column; gap: 22px;
+          padding-block: 20px; padding-left: 20px; padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+  h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.01em; text-wrap: balance; }
+  .size { margin: 4px 0 0; font: 500 15px var(--font-data); color: var(--accent); font-variant-numeric: tabular-nums; }
+  h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+  .seg button { font: 600 14px var(--font-label); padding: 7px 0; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .parts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .parts button { width: 100%; display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+                  padding: 6px 4px; border: 0; border-bottom: 1px solid var(--rule); background: transparent; color: var(--fg);
+                  font: 500 15px var(--font-label); text-align: left; cursor: pointer; }
+  .parts button:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .parts button[aria-pressed="true"] { color: var(--sel); }
+  .swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--rule); }
+  .dims { font: 400 12px var(--font-data); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .block { border: 1px solid var(--rule); display: grid; grid-template-columns: auto 1fr; font: 400 12px var(--font-data); margin-top: auto; }
+  .block span { padding: 5px 8px; border-bottom: 1px solid var(--rule); }
+  .block span:nth-child(odd) { color: var(--muted); border-right: 1px solid var(--rule); font-family: var(--font-label); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .block span:nth-last-child(-n+2) { border-bottom: 0; }
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 58vh auto; height: auto; }
+    aside { border-left: 0; border-top: 1px solid var(--rule); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  }
+</style>
+
+<div class="app">
+  <div class="stage">
+    <canvas id="view" aria-label="3D model of the watch. Drag to turn, pinch or scroll to zoom."></canvas>
+    <div class="status" id="status">Loading the model…</div>
+    <p class="hint">Drag to turn · scroll to zoom · tap a part</p>
+  </div>
+  <aside>
+    <div>
+      <h1>UtilWatch</h1>
+      <p class="size" id="size">— × — × — mm</p>
+    </div>
+    <section>
+      <h2>Case</h2>
+      <div class="seg" role="group" aria-label="Case">
+        <button id="case-solid" data-case="solid" aria-pressed="false">Solid</button>
+        <button id="case-clear" data-case="clear" aria-pressed="true">See-through</button>
+        <button id="case-off" data-case="off" aria-pressed="false">Hidden</button>
+      </div>
+    </section>
+    <section>
+      <h2><label for="explode">Pull apart</label></h2>
+      <input id="explode" type="range" min="0" max="1" step="0.01" value="0">
+    </section>
+    <section>
+      <h2>Parts</h2>
+      <ul class="parts" id="parts"></ul>
+    </section>
+    <div class="block">
+      <span>Units</span><span>mm</span>
+      <span>Sizes</span><span>datasheet, not measured</span>
+      <span>Source</span><span>case/watch.py</span>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+const { OrbitControls, GLTFLoader } = THREE;
+
+const canvas = document.getElementById("view");
+const status = document.getElementById("status");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 2000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8090a0, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(60, 120, 80);
+scene.add(sun);
+
+const parts = [];  // { mesh, label, base, rise, material, color }
+let selected = null;
+
+function resize() {
+  const { clientWidth: w, clientHeight: h } = canvas;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(canvas);
+
+const fmt = v => v.toFixed(1);
+const sizeOf = box => box.getSize(new THREE.Vector3());
+
+// The .glb comes base64-wrapped in a .json file: the artifact host doesn't serve .glb.
+// The published page has the model inlined as window.WATCH (see case/watch.py); locally it's fetched.
+(window.WATCH ? Promise.resolve(window.WATCH) : fetch("build/watch.json").then(r => r.json())).then(({ glb }) => {
+  const bytes = Uint8Array.from(atob(glb), c => c.charCodeAt(0));
+  new GLTFLoader().parse(bytes.buffer, "", show, fail);
+}).catch(fail);
+
+function show(gltf) {
+  const root = gltf.scene;
+  root.scale.setScalar(1000);       // glTF is metres, show millimetres
+  scene.add(root);
+  root.updateMatrixWorld(true);
+
+  const all = new THREE.Box3().setFromObject(root);
+  const s = sizeOf(all);
+  document.getElementById("size").textContent = `${fmt(s.x)} × ${fmt(s.z)} × ${fmt(s.y)} mm`;
+
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    let owner = o;  // the part: the node right under the "UtilWatch" assembly node
+    while (owner.parent && owner.parent.parent !== root) owner = owner.parent;
+    const label = (owner.name || o.name).replaceAll("_", " ");
+    const box = new THREE.Box3().setFromObject(o);
+    const material = o.material.clone();
+    material.metalness = 0.05;
+    material.roughness = 0.55;
+    if (label === "Case") material.depthWrite = false;
+    o.material = material;
+    o.userData.label = label;
+    // World "up" (1 mm) as seen from the mesh's parent, whose axes and units the file sets.
+    const up = o.parent.worldToLocal(new THREE.Vector3(0, 1, 0)).sub(o.parent.worldToLocal(new THREE.Vector3()));
+    parts.push({ mesh: o, label, base: o.position.clone(), up, rise: 0, material, box });
+  });
+
+  // A part is several meshes (one per face): they all rise by the whole part's height.
+  const boxes = new Map();
+  for (const p of parts) boxes.set(p.label, (boxes.get(p.label) || new THREE.Box3()).union(p.box));
+  for (const p of parts) p.rise = boxes.get(p.label).getCenter(new THREE.Vector3()).y - all.min.y;
+
+  buildList();
+  setCase("clear");
+  const c = all.getCenter(new THREE.Vector3());
+  controls.target.copy(c);
+  camera.position.set(c.x + 55, c.y + 70, c.z + 85);
+  controls.update();
+  status.hidden = true;
+}
+
+function fail() {
+  status.textContent = "Couldn't load build/watch.json. Run: uv run python case/watch.py";
+}
+
+// Per part: one list row, keyed by label (a part can be several meshes).
+function buildList() {
+  const list = document.getElementById("parts");
+  const seen = new Map();
+  for (const p of parts) {
+    if (seen.has(p.label)) { seen.get(p.label).union(p.box); continue; }
+    seen.set(p.label, p.box.clone());
+  }
+  for (const [label, box] of seen) {
+    const s = sizeOf(box);
+    const color = parts.find(p => p.label === label).material.color.getStyle();
+    const li = document.createElement("li");
+    li.innerHTML = `<button type="button" aria-pressed="false"><span class="swatch" style="background:${color}"></span><span></span><span class="dims">${fmt(s.x)}×${fmt(s.z)}×${fmt(s.y)}</span></button>`;
+    li.querySelector("span:nth-child(2)").textContent = label;
+    li.firstChild.addEventListener("click", () => select(selected === label ? null : label));
+    li.firstChild.dataset.label = label;
+    list.append(li);
+  }
+}
+
+function select(label) {
+  selected = label;
+  for (const p of parts) p.material.emissive.set(p.label === label ? 0x6a3a00 : 0x000000);
+  for (const b of document.querySelectorAll(".parts button")) b.setAttribute("aria-pressed", String(b.dataset.label === label));
+}
+
+function setCase(mode) {
+  for (const p of parts) {
+    if (p.label !== "Case" && p.label !== "Back plate") continue;
+    p.mesh.visible = mode !== "off";
+    p.material.transparent = mode === "clear";
+    p.material.opacity = mode === "clear" ? 0.3 : 1;
+    p.material.depthWrite = mode !== "clear";
+    p.material.needsUpdate = true;
+  }
+  for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.case === mode));
+}
+for (const b of document.querySelectorAll(".seg button")) b.addEventListener("click", () => setCase(b.dataset.case));
+
+// Pull apart: each part rises in proportion to its height in the stack, so the layers separate.
+document.getElementById("explode").addEventListener("input", e => {
+  const t = Number(e.target.value);
+  for (const p of parts) p.mesh.position.copy(p.base).addScaledVector(p.up, t * 3 * p.rise);
+});
+
+// Tap a part to pick it (ignore drags).
+const ray = new THREE.Raycaster();
+let downAt = null;
+canvas.addEventListener("pointerdown", e => (downAt = [e.clientX, e.clientY]));
+canvas.addEventListener("pointerup", e => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  const r = canvas.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+  const hit = ray.intersectObjects(parts.filter(p => p.mesh.visible).map(p => p.mesh)).find(h => !(h.object.userData.label === "Case" && h.object.material.transparent));
+  select(hit ? hit.object.userData.label : null);
+});
+
+renderer.setAnimationLoop(() => {
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>

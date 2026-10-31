@@ -34,21 +34,23 @@ NETS = {  # (ref, pin) -> net, from kicad/perfboard (same circuit)
     ("SW2", "2"): "GND", ("SW3", "2"): "GND", ("SW4", "2"): "GND", ("SW5", "2"): "GND",
     ("R1", "1"): "VSYS", ("R1", "2"): "VBAT_SENSE", ("R2", "1"): "VBAT_SENSE", ("R2", "2"): "GND",
     ("C1", "1"): "VBAT_SENSE", ("C1", "2"): "GND",
-    ("SW1", "1"): "VSYS", ("SW1", "2"): "VOUT",        # pin 3 (the switch's other throw) is unused
+    ("SW1", "3"): "VSYS", ("SW1", "2"): "VOUT",        # pin 1 (the switch's other throw) is unused
     ("J2", "1"): "VOUT", ("J2", "2"): "GND",           # TP4056 OUT+ / OUT-
 }
+
+# All four buttons on the right edge (the hand side on a left wrist), at 8.8 mm pitch: a bracket
+# is ~8.3 mm along the edge, so they nearly touch. The left edge is the USB-C plus the SuperMini's
+# pin row, which leaves no room for the slider there; it goes on the bottom edge at the left end.
+BUTTONS = (("SW2", "Up", 2.55), ("SW4", "Select", 11.35), ("SW3", "Down", 20.15), ("SW5", "Back", 28.95))
 
 # ref -> (library, footprint, value, x, y, rotation). Board coords: origin top-left, y down.
 # The right-angle buttons' actuators point away from the board at rotation -90 (right) / 90 (left).
 PARTS = {
-    "J1": ("Connector_PinHeader_2.54mm", "PinHeader_1x04_P2.54mm_Vertical", "OLED", 13.19, 2.2, 90),
-    "SW2": ("Button_Switch_THT", "SW_SPST_Omron_B3F-315x_Angled", "Up", 31.2, 4.75, -90),
-    "SW4": ("Button_Switch_THT", "SW_SPST_Omron_B3F-315x_Angled", "Select", 31.2, 15.75, -90),
-    "SW3": ("Button_Switch_THT", "SW_SPST_Omron_B3F-315x_Angled", "Down", 31.2, 26.75, -90),
-    "SW5": ("Button_Switch_THT", "SW_SPST_Omron_B3F-315x_Angled", "Back", 3.5, 31.25, 90),
-    "R1": ("Resistor_THT", "R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical", "100k", 9.5, 25.0, 0),
-    "R2": ("Resistor_THT", "R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical", "100k", 9.5, 28.0, 0),
-    "C1": ("Capacitor_THT", "C_Disc_D3.0mm_W2.0mm_P2.50mm", "100nF", 9.5, 31.0, 0),
+    "J1": ("Connector_PinHeader_2.54mm", "PinHeader_1x04_P2.54mm_Vertical", "OLED", 13.19, 2.25, 90),
+    # The four buttons are in BUTTONS below; the power slider is built in slide_switch().
+    "R1": ("Resistor_THT", "R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical", "100k", 23.0, 25.0, 0),
+    "R2": ("Resistor_THT", "R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical", "100k", 23.0, 28.0, 0),
+    "C1": ("Capacitor_THT", "C_Disc_D3.0mm_W2.0mm_P2.50mm", "100nF", 23.0, 31.0, 0),
     "J2": ("Connector_PinHeader_2.54mm", "PinHeader_1x02_P2.54mm_Vertical", "TP4056 OUT", 17.0, 24.8, 90),
 }
 
@@ -108,16 +110,60 @@ def supermini(board):
     return fp
 
 
-def slide_switch(board):
-    """SS-12F23 right-angle slide switch on the bottom edge, knob out through the case. Three pins at
+def npth(fp, x, y, d):
+    pad = pcbnew.PAD(fp)
+    pad.SetNumber("")
+    pad.SetAttribute(pcbnew.PAD_ATTRIB_NPTH)
+    pad.SetLayerSet(pad.UnplatedHoleMask())
+    pad.SetShape(pcbnew.F_Cu, pcbnew.PAD_SHAPE_CIRCLE)
+    pad.SetSize(pcbnew.F_Cu, pcbnew.VECTOR2I(mm(d), mm(d)))
+    pad.SetDrillSize(pcbnew.VECTOR2I(mm(d), mm(d)))
+    pad.SetPosition(P(x, y))
+    fp.Add(pad)
+
+
+def button(board, ref, value, x, y, rot):
+    """6x6 right-angle tactile switch with bracket (Daier KFC-A06W1, C&K PTS645Vx31, Omron
+    B3F-315x): pins 4.5 mm apart, bracket legs 7 mm apart 2.5 mm behind them. Same holes as KiCad's
+    Omron footprint, but the leg holes are unplated and the courtyard is tight, so four fit on one
+    edge. Built with the actuator pointing -y, then rotated about pin 1."""
+    fp = pcbnew.FOOTPRINT(board)
+    fp.SetFPID(pcbnew.LIB_ID("utilwatch", "SW_Tactile_6mm_Angled_Bracket"))
+    fp.SetReference(ref)
+    fp.SetValue(value)
+    fp.SetPosition(P(x, y))
+    for n, dx in (("1", 0.0), ("2", 4.5)):
+        pad = pcbnew.PAD(fp)
+        pad.SetNumber(n)
+        pad.SetAttribute(pcbnew.PAD_ATTRIB_PTH)
+        pad.SetLayerSet(pad.PTHMask())
+        pad.SetShape(pcbnew.F_Cu, pcbnew.PAD_SHAPE_CIRCLE)
+        pad.SetSize(pcbnew.F_Cu, pcbnew.VECTOR2I(mm(1.8), mm(1.8)))
+        pad.SetDrillSize(pcbnew.VECTOR2I(mm(1.0), mm(1.0)))
+        pad.SetPosition(P(x + dx, y))
+        fp.Add(pad)
+    for dx in (-1.25, 5.75):
+        npth(fp, x + dx, y + 2.5, 1.3)
+    rect(fp, pcbnew.F_Fab, x - 1.5, y - 2.4, x + 6.0, y + 4.1, 0.1)      # body and bracket
+    rect(fp, pcbnew.F_Fab, x + 0.5, y - 6.7, x + 4.0, y - 2.4, 0.1)      # 4.3 mm actuator
+    rect(fp, pcbnew.F_CrtYd, x - 2.15, y - 2.65, x + 6.65, y + 4.35, 0.05)
+    fp.Reference().SetVisible(False)
+    fp.Value().SetVisible(False)
+    fp.SetOrientationDegrees(rot)
+    board.Add(fp)
+    return fp
+
+
+def slide_switch(board, cx, cy, rot):
+    """SS-12F23 right-angle slide switch, built with its knob pointing +y and then rotated by rot about
+    the middle pin at (cx, cy). Three pins at
     3.0 mm plus a mounting tab at each end of the body. The tab spots come from the vendor drawing,
     not a measured part, so they are slots: check them on the fit-check print before ordering."""
     fp = pcbnew.FOOTPRINT(board)
     fp.SetFPID(pcbnew.LIB_ID("utilwatch", "SW_Slide_SS-12F23_Angled"))
     fp.SetReference("SW1")
     fp.SetValue("Power switch")
-    fp.SetPosition(P(0, 0))
-    cx, cy = 20.0, 33.0        # pin row; the knob face is ~3.3 mm toward the edge, i.e. at the edge
+    fp.SetPosition(P(cx, cy))  # pin row; the knob face is 3.3 mm from it toward the edge
     for i in range(3):
         pad = pcbnew.PAD(fp)
         pad.SetNumber(str(i + 1))
@@ -144,6 +190,7 @@ def slide_switch(board):
     rect(fp, pcbnew.F_CrtYd, cx - 6.7, cy - 2.45, cx + 6.7, cy + 3.55, 0.05)
     fp.Reference().SetVisible(False)
     fp.Value().SetVisible(False)
+    fp.SetOrientationDegrees(rot)
     board.Add(fp)
     return fp
 
@@ -158,7 +205,9 @@ for name in sorted(set(NETS.values())):
     nets[name] = pcbnew.NETINFO_ITEM(board, name)
     board.Add(nets[name])
 
-fps = {"U1": supermini(board), "SW1": slide_switch(board)}
+fps = {"U1": supermini(board), "SW1": slide_switch(board, 10.3, 33.0, 0)}
+for ref, value, y in BUTTONS:
+    fps[ref] = button(board, ref, value, 31.2, y, -90)
 for ref, (lib, name, value, x, y, rot) in PARTS.items():
     fp = pcbnew.FootprintLoad(f"{FPDIR}/{lib}.pretty", name)
     fp.SetReference(ref)
@@ -202,23 +251,35 @@ for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
     outline(z, 0, 0, W, H)
     board.Add(z)
 
+def keepout(pts, zones, tracks):
+    keep = pcbnew.ZONE(board)
+    keep.SetIsRuleArea(True)
+    keep.SetDoNotAllowZoneFills(zones)
+    keep.SetDoNotAllowTracks(tracks)
+    keep.SetDoNotAllowVias(tracks)
+    keep.SetDoNotAllowPads(False)
+    keep.SetDoNotAllowFootprints(False)
+    keep.SetLayerSet(pcbnew.LSET.AllCuMask())
+    ol = keep.Outline()
+    ol.NewOutline()
+    for x, y in pts:
+        ol.Append(mm(OX + x), mm(OY + y))
+    board.Add(keep)
+
+
+def box(x0, y0, x1, y1):
+    return ((x0, y0), (x1, y0), (x1, y1), (x0, y1))
+
+
 # No ground plane under the SuperMini's chip antenna (the far end from the USB), or BLE range drops.
-keep = pcbnew.ZONE(board)
-keep.SetIsRuleArea(True)
-keep.SetDoNotAllowZoneFills(True)
-keep.SetDoNotAllowTracks(False)
-keep.SetDoNotAllowVias(False)
-keep.SetDoNotAllowPads(False)
-keep.SetDoNotAllowFootprints(False)
-keep.SetLayerSet(pcbnew.LSET.AllCuMask())
-outline(keep, SM_X + SM_LEN - 4.0, SM_Y + 3.0, SM_X + SM_LEN + 0.5, SM_Y + SM_W - 3.0)
-board.Add(keep)
+keepout(box(SM_X + SM_LEN - 4.0, SM_Y + 3.0, SM_X + SM_LEN + 0.5, SM_Y + SM_W - 3.0), True, False)
 
 
-def silk(s, x, y, size=0.8, layer=pcbnew.F_SilkS):
+def silk(s, x, y, size=0.8, layer=pcbnew.F_SilkS, angle=0):
     t = pcbnew.PCB_TEXT(board)
     t.SetText(s)
     t.SetPosition(P(x, y))
+    t.SetTextAngleDegrees(angle)
     t.SetLayer(layer)
     t.SetTextSize(pcbnew.VECTOR2I(mm(size), mm(size)))
     t.SetTextThickness(mm(max(size * 0.15, 0.12)))
@@ -228,17 +289,15 @@ def silk(s, x, y, size=0.8, layer=pcbnew.F_SilkS):
 
 B = pcbnew.B_SilkS  # the top side is covered by the SuperMini and OLED: labels go on the back
 silk("VCC GND SCL SDA", 17.0, 0.9, 0.7, B)
-silk("UP", 27.0, 8.6, 0.8, B)
-silk("SEL", 26.9, 18.0, 0.8, B)
-silk("DOWN", 26.7, 29.0, 0.8, B)
-silk("BACK", 4.2, 34.4, 0.7, B)
-silk("TP4056", 23.0, 24.8, 0.6, B)
+silk("UP", 28.0, 4.7, 0.8, B)
+silk("SEL", 28.0, 13.5, 0.8, B)
+silk("DOWN", 28.0, 22.3, 0.8, B)
+silk("BACK", 28.0, 31.1, 0.8, B)
+silk("TP4056", 15.2, 26.1, 0.6, B, 90)
 silk("+", 17.0, 26.9, 0.8, B)
 silk("-", 19.54, 26.9, 0.8, B)
-silk("SWITCH", 20.0, 31.2, 0.6, B)
-for y, v in ((25.0, "100k"), (28.0, "100k"), (31.0, "100n")):
-    silk(v, 14.6, y, 0.6, B)
-silk("UtilWatch carrier v0.1", 17.0, 35.1, 0.7, B)
+silk("SWITCH", 10.3, 35.3, 0.6, B)
+silk("UtilWatch carrier v0.1", 14.0, 13.5, 0.7, B)
 
 board.SetFileName(OUT)
 pcbnew.SaveBoard(OUT, board)

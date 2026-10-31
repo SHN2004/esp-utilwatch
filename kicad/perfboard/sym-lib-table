@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "utilwatch") (type "KiCad") (uri "${KIPRJMOD}/utilwatch.kicad_sym") (options "") (descr "UtilWatch modules"))
+)

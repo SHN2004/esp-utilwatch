@@ -13,6 +13,18 @@
       "skillPath": "skills/kicad/SKILL.md",
       "computedHash": "4b65eac3809e9812777ea3d247ce07dca813e2887a4617a08ba7fc0201d912dd"
     },
+    "kicad-pcb": {
+      "source": "backplaneworks/kistack",
+      "sourceType": "github",
+      "skillPath": "skills/pcb/SKILL.md",
+      "computedHash": "3f744ea0af1e1db1d03a103c36aef426f0284668c60e575172871635a91fc17e"
+    },
+    "steve-jobs-design-review": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "steve-jobs-design-review/SKILL.md",
+      "computedHash": "02946f53dace876aa85efa16b7b7eb099031ddcd974072ecec801bb253430428"
+    },
     "teach": {
       "source": "mattpocock/skills",
       "sourceType": "github",

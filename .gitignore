@@ -2,3 +2,10 @@ learn/
 photos/
 preview.gif
 .DS_Store
+.venv/
+case/build/
+*.kicad_prl
+*-backups/
+fp-info-cache
+~*.lck
+kicad/board/fab/utilwatch-gerbers/

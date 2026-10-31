@@ -7,6 +7,12 @@
       "skillPath": "esp32-firmware-engineer/SKILL.md",
       "computedHash": "3df8fc9d1ba783e4f09c59cf728cfb73cecfca89eece4a3b5b7d7e3e62068b6e"
     },
+    "kicad": {
+      "source": "aklofas/kicad-happy",
+      "sourceType": "github",
+      "skillPath": "skills/kicad/SKILL.md",
+      "computedHash": "4b65eac3809e9812777ea3d247ce07dca813e2887a4617a08ba7fc0201d912dd"
+    },
     "teach": {
       "source": "mattpocock/skills",
       "sourceType": "github",

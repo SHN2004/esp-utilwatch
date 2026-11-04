@@ -27,5 +27,20 @@ int main() {
   assert(field("{\"track\":\"x\\\"artist\\\":y\",\"artist\":\"Z\"}", "artist") == "Z");  // key text inside a value
   assert(field("{\"track\":\"cut\\", "track") == "cut");                      // truncated line
 
+  assert(field("{\"art\":atob(\"AAEC\")}", "art") == std::string("\0\1\2", 3));  // a cover can contain zero bytes
+
+  uint32_t n = 7;
+  assert(gbNumber(info, "dur", n) && n == 320);
+  assert(gbNumber("{\"position\":0,\"shuffle\":-1}", "position", n) && n == 0);
+  n = 7;
+  assert(!gbNumber("{\"position\":0,\"shuffle\":-1}", "shuffle", n) && n == 7);  // -1 = unknown
+  assert(!gbNumber(info, "artist", n) && n == 7);                                // string, not a number
+  assert(!gbNumber(info, "position", n) && n == 7);                              // missing key
+
+  assert(gbPosition(10, 5999, true, 200) == 15);   // counts whole seconds while playing
+  assert(gbPosition(10, 5999, false, 200) == 10);  // holds still while paused
+  assert(gbPosition(198, 5000, true, 200) == 200);  // stops at the end of the song
+  assert(gbPosition(50, 0, false, 31) == 31);       // a report past the end
+
   puts("gb.h: all checks passed");
 }

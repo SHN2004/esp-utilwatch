@@ -5,6 +5,7 @@
 // octal escapes, or arrive base64-encoded as atob("..."). The result is Latin-1 bytes
 // (what the OLED's _tf fonts draw); characters above 255 become '?'.
 #pragma once
+#include <cstdint>
 #include <string>
 #include <cstring>
 
@@ -81,4 +82,26 @@ inline bool gbField(const std::string &line, const char *key, std::string &out) 
     }
   }
   return true;
+}
+
+// Finds "key": in the line and reads its whole-number value into out, e.g. "dur":320.
+// Returns false, leaving out alone, if the key is missing or its value isn't a number
+// (Gadgetbridge sends -1 for "unknown").
+inline bool gbNumber(const std::string &line, const char *key, uint32_t &out) {
+  std::string pattern = std::string("\"") + key + "\":";
+  size_t at = line.find(pattern);
+  if (at == std::string::npos) return false;
+  const char *p = line.c_str() + at + pattern.size();
+  if (*p < '0' || *p > '9') return false;
+  uint32_t v = 0;
+  while (*p >= '0' && *p <= '9') v = v * 10 + (*p++ - '0');
+  out = v;
+  return true;
+}
+
+// Where the song is now, in seconds. The phone only reports its position now and then,
+// so count forward from the last report while playing, stopping at the end of the song.
+inline uint32_t gbPosition(uint32_t reported, uint32_t msSinceReport, bool playing, uint32_t duration) {
+  uint32_t p = reported + (playing ? msSinceReport / 1000 : 0);
+  return p < duration ? p : duration;
 }

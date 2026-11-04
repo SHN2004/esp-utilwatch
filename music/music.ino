@@ -1,7 +1,7 @@
 // UtilWatch music watch for Android: shows what's playing and controls it, through
-// the Gadgetbridge app (works with Spotify, YouTube Music, any app with media controls).
-// The watch pretends to be a Bangle.js, a watch Gadgetbridge supports: it speaks
-// Bangle.js's protocol, text lines over the Nordic UART Bluetooth service.
+// the UtilWatch phone app in android/ (works with Spotify, YouTube Music, any app with
+// media controls). The messages are Bangle.js's protocol, text lines over the Nordic UART
+// Bluetooth service, so Gadgetbridge works too, minus the cover and player logo.
 //
 // Button grammar, the same in every UtilWatch app: tap = the app's action, hold ~600 ms =
 // the secondary axis, and holding SELECT always means Back / exit to home. Double-tap
@@ -18,6 +18,7 @@
 #include <BLESecurity.h>
 #include <freertos/stream_buffer.h>
 #include "gb.h"
+#include "logos.h"
 
 #define SDA_PIN 19
 #define SCL_PIN 20
@@ -40,6 +41,9 @@ StreamBufferHandle_t rxStream;  // bytes from the phone, handed from the BLE tas
 volatile bool connected = false;
 
 std::string artist, track, state;  // Latin-1, straight from Gadgetbridge
+std::string source;                // the playing app's package name; only the UtilWatch app sends this
+std::string art;                   // the cover: 288 bytes of 48x48 XBM, or empty; only the UtilWatch app sends this
+uint32_t duration, reportedPosition, reportedAt;  // seconds; 0 duration = not known yet (bar hidden)
 const char *lastCmd = "";
 uint32_t lastCmdAt;
 
@@ -75,16 +79,31 @@ void send(const char *cmd, const char *label) {
   }
 }
 
+void setPosition(uint32_t seconds) {
+  reportedPosition = seconds;
+  reportedAt = millis();
+}
+
 void handleLine(std::string &line) {
   if (!line.empty() && line[0] == 0x10) line.erase(0, 1);  // DLE prefix: tells a real Bangle.js not to echo
   if (line.compare(0, 3, "GB(") != 0) return;              // e.g. setTime(...): not needed yet
   std::string t;
   if (!gbField(line, "t", t)) return;
   if (t == "musicinfo") {
+    std::string oldArtist = artist, oldTrack = track;
     gbField(line, "artist", artist);
     gbField(line, "track", track);
+    gbField(line, "source", source);
+    gbNumber(line, "dur", duration);
+    if (artist != oldArtist || track != oldTrack) setPosition(0);  // a new song doesn't always come with a position
   } else if (t == "musicstate") {
     gbField(line, "state", state);
+    uint32_t position;
+    if (gbNumber(line, "position", position)) setPosition(position);
+  } else if (t == "musicart") {
+    gbField(line, "art", art);
+    Serial.printf("got cover, %u bytes\n", (unsigned)art.size());
+    return;
   } else {
     return;  // notifications, weather, ...
   }
@@ -125,7 +144,8 @@ void pollButtons() {
       if (down || hold) continue;  // a press is decided on release; a hold already acted
       if (i == UP) send("previous", "Previous");
       if (i == DOWN) send("next", "Next");
-      if (i == SEL) send("playpause", "Play/Pause");
+      if (i == SEL) send("playpause", state == "play" ? "Pause" : "Play");
+      if (i != SEL && connected) setPosition(0);  // a skip starts at 0, and the phone doesn't always say so
     } else if (hold && i != SEL && now - lastRamp >= RAMP_MS) {  // SELECT hold = Back: no-op here
       send(i == UP ? "volumeup" : "volumedown", i == UP ? "Vol +" : "Vol -");
       lastRamp = now;
@@ -133,40 +153,109 @@ void pollButtons() {
   }
 }
 
-// Draws text at y, scrolling it sideways if it's wider than the screen.
-void drawScrolling(const std::string &s, int y) {
-  int w = u8g2.getStrWidth(s.c_str());
-  if (w <= 128) {
-    u8g2.drawStr(0, y, s.c_str());
+const int COVER_SIZE = 48;
+const int COL_X = COVER_SIZE + 4;    // the column of text right of the cover
+const int WAVE_Y = 57, WAVE_AMP = 6;  // the waveform strip along the bottom: centre line, tallest bar
+const int SCROLL_REST = 50;          // scroll steps (30 ms each) to rest at the start, so the title can be read
+
+// Draws the title, scrolling it sideways if it's wider than the column.
+// The cover is drawn after it, which hides the text scrolling off to the left.
+void drawTitle() {
+  const char *s = track.c_str();
+  int w = u8g2.getStrWidth(s);
+  if (w <= 128 - COL_X) {
+    u8g2.drawStr(COL_X, 28, s);
     return;
   }
   int span = w + 30;  // gap before the text comes round again
-  int x = -(int)(millis() / 30 % span);
-  u8g2.drawStr(x, y, s.c_str());
-  u8g2.drawStr(x + span, y, s.c_str());
+  int step = millis() / 30 % (span + SCROLL_REST);
+  int x = COL_X - max(0, step - SCROLL_REST);
+  u8g2.drawStr(x, 28, s);
+  u8g2.drawStr(x + span, 28, s);
+}
+
+// The cover, or the player's logo in a frame if there isn't one, with one corner cut off.
+void drawCover(const uint8_t *logo) {
+  u8g2.setDrawColor(0);
+  u8g2.drawBox(0, 0, COL_X, 30);
+  u8g2.setDrawColor(1);
+  if (art.size() == COVER_SIZE * COVER_SIZE / 8) {
+    u8g2.drawXBM(0, 0, COVER_SIZE, COVER_SIZE, (const uint8_t *)art.data());
+  } else {
+    u8g2.drawFrame(0, 0, COVER_SIZE, COVER_SIZE);
+    u8g2.drawXBM((COVER_SIZE - LOGO_SIZE) / 2, (COVER_SIZE - LOGO_SIZE) / 2, LOGO_SIZE, LOGO_SIZE, logo);
+  }
+  u8g2.setDrawColor(0);
+  for (int i = 0; i < 6; i++) u8g2.drawHLine(COVER_SIZE - 1 - i, COVER_SIZE - 6 + i, i + 1);
+  u8g2.setDrawColor(1);
+  if (art.empty()) u8g2.drawLine(COVER_SIZE - 1, COVER_SIZE - 7, COVER_SIZE - 7, COVER_SIZE - 1);  // closes the frame
+}
+
+// The progress bar, solid up to the playhead. It only looks like a waveform: the watch never
+// gets the audio, so the shape is made up from the song's name, the same each time for one song.
+// While playing, the bars just behind the playhead move; that's what says "playing" on this screen.
+void drawWave(int head, bool playing) {
+  uint32_t h = 2166136261u;
+  for (char c : track) h = (h ^ (uint8_t)c) * 16777619u;
+  for (int x = 0; x < 126; x += 3) {
+    h = h * 1664525u + 1013904223u;
+    float envelope = sin(x * .05f + 1) * .35f + .65f;
+    int amp = min(WAVE_AMP, 1 + (int)(envelope * ((h >> 24) % 5 + 2)));
+    if (x >= head) {
+      u8g2.drawHLine(x, WAVE_Y, 2);
+      continue;
+    }
+    if (playing && head - x < 15) amp = max(1, amp - (int)((millis() / 90 + x) % 4));
+    u8g2.drawBox(x, WAVE_Y - amp, 2, 2 * amp + 1);
+  }
+  u8g2.drawVLine(head, WAVE_Y - WAVE_AMP - 1, 2 * WAVE_AMP + 2);
+}
+
+void drawSong() {
+  bool spotify = source == "com.spotify.music";
+  // Match the end only: patched YouTube Music builds start with something else.
+  bool ytMusic = source.size() >= 13 && source.compare(source.size() - 13, 13, "youtube.music") == 0;
+  const uint8_t *logo = spotify ? LOGO_SPOTIFY : ytMusic ? LOGO_YT_MUSIC : LOGO_MUSIC;
+
+  u8g2.setFont(u8g2_font_6x13B_tf);
+  drawTitle();
+  drawCover(logo);
+  u8g2.drawXBM(COL_X, 0, LOGO_SIZE, LOGO_SIZE, logo);
+  u8g2.setFont(u8g2_font_5x8_tf);
+  u8g2.drawStr(COL_X + LOGO_SIZE + 3, 10, spotify ? "SPOTIFY" : ytMusic ? "YT MUSIC" : "MUSIC");
+  if (state == "pause") {
+    u8g2.drawBox(120, 2, 3, 9);
+    u8g2.drawBox(125, 2, 3, 9);
+  }
+  u8g2.drawStr(COL_X, 38, artist.c_str());  // ponytail: long artists run off the edge; only the title moves
+
+  bool playing = state == "play";
+  uint32_t position = duration ? gbPosition(reportedPosition, millis() - reportedAt, playing, duration) : 0;
+  drawWave(duration ? 128 * position / duration : 0, playing && duration);
+  if (duration && millis() - lastCmdAt >= 1000) {
+    char times[24];
+    snprintf(times, sizeof times, "%02lu:%02lu/%02lu:%02lu", (unsigned long)position / 60, (unsigned long)position % 60,
+             (unsigned long)duration / 60, (unsigned long)duration % 60);
+    u8g2.drawStr(COL_X, 47, times);
+  }
+}
+
+// Nothing to show: a flat line, and while looking for the phone the playhead sweeps across it.
+void drawIdle() {
+  u8g2.setFont(u8g2_font_spleen8x16_mf);
+  u8g2.drawStr(0, 14, connected ? "Nothing playing" : "Connecting");
+  u8g2.setFont(u8g2_font_5x8_tf);
+  if (!connected) u8g2.drawStr(0, 25, "Open the phone app");
+  for (int x = 0; x < 126; x += 3) u8g2.drawHLine(x, WAVE_Y, 2);
+  if (!connected) u8g2.drawVLine(millis() / 20 % 128, WAVE_Y - WAVE_AMP - 1, 2 * WAVE_AMP + 2);
 }
 
 void draw() {
   u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_6x10_tf);
-  u8g2.drawStr(0, 10, connected ? "Phone connected" : "Waiting for phone");
-  if (state == "play") {
-    u8g2.drawTriangle(120, 2, 120, 10, 127, 6);
-  } else if (state == "pause") {
-    u8g2.drawBox(120, 2, 3, 9);
-    u8g2.drawBox(125, 2, 3, 9);
-  }
-  u8g2.drawHLine(0, 13, 128);
-
-  if (track.empty()) {
-    u8g2.drawStr(0, 32, connected ? "Play some music" : "Open Gadgetbridge");
-  } else {
-    u8g2.setFont(u8g2_font_helvB10_tf);
-    drawScrolling(track, 32);
-    u8g2.setFont(u8g2_font_6x10_tf);
-    drawScrolling(artist, 46);
-  }
-  if (millis() - lastCmdAt < 1000) u8g2.drawStr(0, 62, lastCmd);
+  bool hasSong = connected && !track.empty();
+  if (hasSong) drawSong();
+  else drawIdle();
+  if (millis() - lastCmdAt < 1000) u8g2.drawStr(hasSong ? COL_X : 0, 47, lastCmd);  // where the times go
   u8g2.sendBuffer();
 }
 
@@ -176,6 +265,7 @@ void setup() {
   while (!Serial && millis() < 3000) delay(10);  // up to 3 s for the Mac to open the port, so boot logs aren't lost
   for (int i = 0; i < 3; i++) pinMode(PINS[i], INPUT_PULLUP);
   u8g2.begin();
+  u8g2.setFontMode(1);  // transparent, so one line of text can't blank part of another
   rxStream = xStreamBufferCreate(2048, 1);
 
   BLEDevice::init("Bangle.js UtilWatch");  // Gadgetbridge recognizes Bangle.js by its name

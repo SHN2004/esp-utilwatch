@@ -1,6 +1,6 @@
-// Button test for the UtilWatch: 4 tactile buttons + the SH1106 OLED.
+// Button test for the UtilWatch: 3 tactile buttons + the SH1106 OLED.
 // Wiring: each button between a GPIO and GND (no resistors, internal pull-ups):
-//   GPIO 4 = UP, GPIO 5 = DOWN, GPIO 6 = SELECT, GPIO 7 = BACK
+//   GPIO 4 = UP, GPIO 5 = DOWN, GPIO 6 = SELECT
 // Each button shows as a box on screen that fills while held, with a press count.
 // Serial Monitor (115200) prints every press and release.
 // A box that's filled before you touch anything = that button is wired to two legs
@@ -15,23 +15,23 @@
 
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, SCL_PIN, SDA_PIN);
 
-const uint8_t PINS[4] = {4, 5, 6, 7};
-const char *NAMES[4] = {"UP", "DOWN", "SEL", "BACK"};
+const uint8_t PINS[3] = {4, 5, 6};
+const char *NAMES[3] = {"UP", "DOWN", "SEL"};
 const uint32_t DEBOUNCE_MS = 25;  // raise if one press counts as two
 
-bool held[4];
-uint32_t changedAt[4], presses[4];
+bool held[3];
+uint32_t changedAt[3], presses[3];
 
 void setup() {
   Serial.begin(115200);
   // Drop serial output instead of waiting when nothing on the Mac is reading the port.
   // Otherwise each print blocks up to 2 s once the 256-byte USB buffer fills.
   Serial.setTxTimeoutMs(0);
-  for (int i = 0; i < 4; i++) pinMode(PINS[i], INPUT_PULLUP);  // unpressed reads HIGH
+  for (int i = 0; i < 3; i++) pinMode(PINS[i], INPUT_PULLUP);  // unpressed reads HIGH
   u8g2.begin();
 
   delay(1500);  // give the USB serial a moment to connect
-  for (int i = 0; i < 4; i++)
+  for (int i = 0; i < 3; i++)
     if (digitalRead(PINS[i]) == LOW)
       Serial.printf("WARNING: %s (GPIO %d) reads pressed with nothing touched. Check it's wired to diagonal legs.\n", NAMES[i], PINS[i]);
   Serial.println("Ready. Press each button.");
@@ -39,7 +39,7 @@ void setup() {
 
 void loop() {
   uint32_t now = millis();
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 3; i++) {
     bool down = digitalRead(PINS[i]) == LOW;  // pressed connects the pin to GND
     // Debounce: ignore changes until the contact has settled.
     if (down != held[i] && now - changedAt[i] > DEBOUNCE_MS) {
@@ -52,8 +52,8 @@ void loop() {
 
   u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_6x10_tr);
-  for (int i = 0; i < 4; i++) {
-    int x = 2 + i * 32;
+  for (int i = 0; i < 3; i++) {
+    int x = 10 + i * 40;
     if (held[i]) u8g2.drawBox(x, 4, 28, 28);
     else u8g2.drawFrame(x, 4, 28, 28);
     u8g2.drawStr(x + (28 - u8g2.getStrWidth(NAMES[i])) / 2, 46, NAMES[i]);

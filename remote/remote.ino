@@ -1,9 +1,14 @@
-// UtilWatch media remote: the 4 buttons control Spotify (or any media app) on a
+// UtilWatch media remote: the 3 buttons control Spotify (or any media app) on a
 // phone over Bluetooth LE, as a HID "consumer control" device, the same kind of
 // device as headset buttons. No app needed on the phone; works on Android and iPhone.
-//   UP = volume up, DOWN = volume down, SELECT = play/pause,
-//   BACK = next track (hold it for previous track)
-// Wiring: same as buttons_test (GPIO 4/5/6/7 to GND) + the OLED on 19/20.
+//
+// Button grammar, the same in every UtilWatch app: tap = the app's action, hold ~600 ms =
+// the secondary axis, and holding SELECT always means Back / exit to home. Double-tap
+// SELECT is reserved as a quick-action slot (not implemented: it costs ~250 ms of tap latency).
+//   UP   tap = previous track, hold = volume up (ramps)
+//   DOWN tap = next track,     hold = volume down (ramps)
+//   SELECT tap = play/pause,   hold = Back (nothing to go back to here, so no-op)
+// Wiring: GPIO 4/5/6 to GND (UP, DOWN, SELECT) + the OLED on 19/20.
 // The phone bonds once; the bond is saved in flash, so it reconnects after reboots.
 
 #include <Arduino.h>
@@ -18,10 +23,11 @@
 
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, SCL_PIN, SDA_PIN);
 
-const uint8_t PINS[4] = {4, 5, 6, 7};  // UP, DOWN, SELECT, BACK
-enum { UP, DOWN, SEL, BACK };
+const uint8_t PINS[3] = {4, 5, 6};  // UP, DOWN, SELECT
+enum { UP, DOWN, SEL };
 const uint32_t DEBOUNCE_MS = 25;
-const uint32_t LONG_PRESS_MS = 500;  // hold BACK this long for previous track
+const uint32_t HOLD_MS = 600;  // shorter is a tap (sent on release), longer is a hold
+const uint32_t RAMP_MS = 150;  // one volume step per this while UP/DOWN stays held
 
 // The phone reads this map once when pairing. iOS ignores media keys from a device
 // that's only a media remote, so it also declares a standard keyboard (report 2),
@@ -110,7 +116,7 @@ void setup() {
   Serial.begin(115200);
   Serial.setTxTimeoutMs(0);  // don't block on prints when nothing is reading the port
   while (!Serial && millis() < 3000) delay(10);  // up to 3 s for the Mac to open the port, so boot logs aren't lost
-  for (int i = 0; i < 4; i++) pinMode(PINS[i], INPUT_PULLUP);
+  for (int i = 0; i < 3; i++) pinMode(PINS[i], INPUT_PULLUP);
   u8g2.begin();
 
   BLEDevice::init("UtilWatch");
@@ -145,28 +151,24 @@ void setup() {
 }
 
 void loop() {
-  static bool held[4];
-  static uint32_t changedAt[4], backDownAt;
-  static bool backLongSent;
+  static bool held[3];
+  static uint32_t changedAt[3], lastRamp;
   uint32_t now = millis();
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 3; i++) {
     bool down = digitalRead(PINS[i]) == LOW;
-    if (down == held[i] || now - changedAt[i] <= DEBOUNCE_MS) continue;
-    held[i] = down;
-    changedAt[i] = now;
-    if (i == BACK) {
-      if (down) backDownAt = now, backLongSent = false;
-      else if (!backLongSent) tap(NEXT, "Next");  // short press, decided on release
-    } else if (down) {
-      if (i == UP) tap(VOL_UP, "Vol +");
-      if (i == DOWN) tap(VOL_DOWN, "Vol -");
+    bool hold = held[i] && now - changedAt[i] >= HOLD_MS;
+    if (down != held[i] && now - changedAt[i] > DEBOUNCE_MS) {  // press or release edge
+      held[i] = down;
+      changedAt[i] = now;
+      if (down || hold) continue;  // a press is decided on release; a hold already acted
+      if (i == UP) tap(PREV, "Previous");
+      if (i == DOWN) tap(NEXT, "Next");
       if (i == SEL) tap(PLAY_PAUSE, "Play/Pause");
+    } else if (hold && i != SEL && now - lastRamp >= RAMP_MS) {  // SELECT hold = Back: no-op here
+      tap(i == UP ? VOL_UP : VOL_DOWN, i == UP ? "Vol +" : "Vol -");
+      lastRamp = now;
     }
-  }
-  if (held[BACK] && !backLongSent && now - backDownAt >= LONG_PRESS_MS) {
-    tap(PREV, "Previous");
-    backLongSent = true;
   }
 
   u8g2.clearBuffer();

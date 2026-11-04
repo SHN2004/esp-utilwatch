@@ -12,7 +12,7 @@
   </g>
 
   <!-- ===== GND to buttons: over the top of the board to a GND rail ===== -->
-  <polyline points="330,136 315,136 315,58 740,58 740,443" fill="none" stroke="#444" stroke-width="3" stroke-linejoin="round"/>
+  <polyline points="330,136 315,136 315,58 740,58 740,358" fill="none" stroke="#444" stroke-width="3" stroke-linejoin="round"/>
   <circle cx="315" cy="136" r="4" fill="#444"/>
   <text x="748" y="92" font-size="12" font-weight="700" fill="#444">GND rail</text>
   <text x="748" y="106" font-size="11" fill="#666">(breadboard − strip)</text>
@@ -22,18 +22,16 @@
     <polyline points="470,316 510,316 510,122 612,122" stroke="#2fa36b"/>   <!-- GPIO4 UP -->
     <polyline points="470,352 535,352 535,212 612,212" stroke="#8e5bd8"/>   <!-- GPIO5 DOWN -->
     <polyline points="470,388 560,388 560,302 612,302" stroke="#e07b2f"/>   <!-- GPIO6 SEL -->
-    <polyline points="470,424 585,424 585,392 612,392" stroke="#1fa2b8"/>   <!-- GPIO7 BACK -->
   </g>
   <!-- bottom-right legs to the GND rail -->
   <g stroke="#444" stroke-width="3">
     <line x1="668" y1="178" x2="740" y2="178"/>
     <line x1="668" y1="268" x2="740" y2="268"/>
     <line x1="668" y1="358" x2="740" y2="358"/>
-    <line x1="668" y1="443" x2="740" y2="443"/>
   </g>
   <g fill="#444">
     <circle cx="740" cy="178" r="4"/><circle cx="740" cy="268" r="4"/>
-    <circle cx="740" cy="358" r="4"/><circle cx="740" cy="443" r="4"/>
+    <circle cx="740" cy="358" r="4"/>
   </g>
 
   <!-- ===== OLED module ===== -->
@@ -66,7 +64,7 @@
     <text x="458" y="176" opacity=".5">0</text><text x="458" y="212" opacity=".5">1</text>
     <text x="458" y="248" opacity=".5">2</text><text x="458" y="284" opacity=".5">3</text>
     <text x="458" y="320">4</text><text x="458" y="356">5</text>
-    <text x="458" y="392">6</text><text x="458" y="428">7</text>
+    <text x="458" y="392">6</text><text x="458" y="428" opacity=".5">7</text>
   </g>
   <g fill="#d4af37">
     <circle cx="330" cy="100" r="5" opacity=".4"/><circle cx="330" cy="136" r="5"/><circle cx="330" cy="172" r="5"/>
@@ -77,7 +75,7 @@
     <circle cx="470" cy="172" r="5" opacity=".4"/><circle cx="470" cy="208" r="5" opacity=".4"/>
     <circle cx="470" cy="244" r="5" opacity=".4"/><circle cx="470" cy="280" r="5" opacity=".4"/>
     <circle cx="470" cy="316" r="5"/><circle cx="470" cy="352" r="5"/>
-    <circle cx="470" cy="388" r="5"/><circle cx="470" cy="424" r="5"/>
+    <circle cx="470" cy="388" r="5"/><circle cx="470" cy="424" r="5" opacity=".4"/>
   </g>
 
   <!-- ===== Buttons (12x12 tactile, 4 legs) ===== -->
@@ -102,13 +100,6 @@
       <circle cx="-28" cy="-28" r="6" fill="#e07b2f"/><circle cx="28" cy="28" r="6" fill="#444"/>
       <circle cx="28" cy="-28" r="5" fill="#bbb"/><circle cx="-28" cy="28" r="5" fill="#bbb"/>
       <text x="0" y="-38" font-size="12" font-weight="700" fill="#e07b2f" text-anchor="middle">SELECT · GPIO 6</text>
-    </g>
-    <g transform="translate(640,415)">
-      <rect x="-28" y="-28" width="56" height="56" rx="6" fill="#e4e1db" stroke="#888" stroke-width="2"/>
-      <circle r="14" fill="#333"/>
-      <circle cx="-28" cy="-28" r="6" fill="#1fa2b8"/><circle cx="28" cy="28" r="6" fill="#444"/>
-      <circle cx="28" cy="-28" r="5" fill="#bbb"/><circle cx="-28" cy="28" r="5" fill="#bbb"/>
-      <text x="0" y="-36" font-size="12" font-weight="700" fill="#1fa2b8" text-anchor="middle">BACK · GPIO 7</text>
     </g>
   </g>
 

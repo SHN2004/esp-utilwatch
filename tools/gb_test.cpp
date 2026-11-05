@@ -36,6 +36,7 @@ int main() {
   assert(!gbNumber("{\"position\":0,\"shuffle\":-1}", "shuffle", n) && n == 7);  // -1 = unknown
   assert(!gbNumber(info, "artist", n) && n == 7);                                // string, not a number
   assert(!gbNumber(info, "position", n) && n == 7);                              // missing key
+  assert(gbNumber("GB({\"t\":\"time\",\"local\":1793772904})", "local", n) && n == 1793772904);
 
   assert(gbPosition(10, 5999, true, 200) == 15);   // counts whole seconds while playing
   assert(gbPosition(10, 5999, false, 200) == 10);  // holds still while paused

@@ -1,0 +1,246 @@
+<title>UtilWatch Case</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=Martian+Mono:wdth,wght@87.5,400;87.5,500&display=swap">
+<style>
+/* Layout: the same repair mat as the solder map. Print sheet on the left, the case on the mat. */
+:root {
+  --mat: #10272c; --mat-2: #163239; --mat-3: #1d3e46;
+  --line: rgba(196, 226, 220, .15); --line-2: rgba(196, 226, 220, .3);
+  --silk: #eef3ea; --muted: #a2b8b3;
+  --kapton: #f4ab3c; --kapton-ink: #201503; --kapton-wash: rgba(244, 171, 60, .13);
+  --cut: #ff7d6e;
+  --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Martian Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--mat); color: var(--silk); font: 400 14px/1.5 var(--body); }
+button, input { font: inherit; color: inherit; }
+button { background: none; border: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--kapton); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); }
+.rail { background: var(--mat-2); border-right: 1px solid var(--line); overflow-y: auto; padding-block: 20px 28px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: 18px; display: grid; gap: 22px; align-content: start; scrollbar-width: thin; scrollbar-color: var(--mat-3) transparent; }
+.brand { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font: 800 44px/0.95 var(--display); letter-spacing: .01em; text-transform: uppercase; text-wrap: balance; }
+.lede { margin: 10px 0 0; color: var(--muted); max-width: 60ch; }
+.dims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.dims div { background: var(--mat); padding: 10px 10px 9px; }
+.dims b { display: block; font: 700 26px/1 var(--display); font-variant-numeric: tabular-nums; }
+.dims span { font: 400 10px/1.3 var(--mono); color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+h2 { margin: 0 0 8px; font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--kapton); }
+.print { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--line); border-block: 1px solid var(--line); }
+.print li { background: var(--mat-2); display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; padding: 10px 2px; }
+.qty { font: 700 22px/1 var(--display); color: var(--kapton); font-variant-numeric: tabular-nums; }
+.print b { display: block; font-weight: 600; }
+.print p, .note p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.file { font: 400 11px/1.4 var(--mono); color: var(--silk); opacity: .8; }
+ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--silk); }
+ol.steps li::marker { font: 500 11px var(--mono); color: var(--muted); }
+.note { border: 1px solid rgba(244, 171, 60, .4); background: var(--kapton-wash); padding: 12px 14px; display: grid; gap: 8px; }
+.note b { color: var(--kapton); font-weight: 600; }
+.note p { color: var(--silk); }
+
+.stage { position: relative; min-width: 0; min-height: 0; background: radial-gradient(120% 90% at 50% 40%, #173a40 0%, var(--mat) 70%); }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.grid { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 40px 40px; opacity: .35; mask-image: radial-gradient(80% 70% at 50% 45%, #000 30%, transparent 85%); }
+.hud { position: absolute; display: flex; flex-wrap: wrap; gap: 8px; }
+.hud.top { top: calc(12px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); left: 12px; justify-content: flex-end; }
+.seg { display: flex; background: rgba(16, 39, 44, .82); border: 1px solid var(--line-2); backdrop-filter: blur(6px); }
+.seg button { padding: 6px 10px; font: 500 11px/1 var(--mono); letter-spacing: .05em; color: var(--muted); transition: color 120ms ease, background-color 120ms ease; }
+.seg button[aria-pressed="true"] { background: var(--silk); color: var(--mat); }
+.seg button:hover:not([aria-pressed="true"]) { color: var(--silk); }
+.expand { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: min(440px, calc(100% - 32px)); background: rgba(16, 39, 44, .86); border: 1px solid var(--line-2); padding: 10px 14px 9px; backdrop-filter: blur(6px); }
+.expand label { display: flex; justify-content: space-between; font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.expand label span { color: var(--muted); letter-spacing: .02em; text-transform: none; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; margin: 10px 0 2px; accent-color: var(--kapton); }
+.ends { display: flex; justify-content: space-between; font: 400 10px/1 var(--mono); color: var(--muted); }
+.fail { position: absolute; inset: auto 16px 50% 16px; text-align: center; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 62vh auto; height: auto; }
+  html, body { height: auto; }
+  .stage { order: -1; height: 62vh; }
+  .rail { border-right: 0; border-top: 1px solid var(--line); overflow: visible; }
+  h1 { font-size: 38px; }
+}
+@media (prefers-reduced-motion: reduce) { .seg button { transition: none; } }
+</style>
+
+<div class="app">
+  <aside class="rail" aria-label="Print sheet">
+    <div>
+      <div class="brand"><span>UtilWatch</span><span>perfboard case</span></div>
+      <h1 style="margin-top:14px">Print the case</h1>
+      <p class="lede">Two printed parts around the one-port perfboard build. The buttons are flexible tabs in the top, and the back plate carries its own posts, so there are no loose parts and no separate posts or spacer.</p>
+    </div>
+
+    <div class="dims" aria-label="Outside size">
+      <div><b id="dW">50.9</b><span>mm wide</span></div>
+      <div><b id="dL">55.1</b><span>mm 12–6 o'clock</span></div>
+      <div><b id="dT">16.9</b><span>mm thick</span></div>
+    </div>
+
+    <section>
+      <h2>Print</h2>
+      <ul class="print">
+        <li><span class="qty">1</span><div><b>Fit test, first</b><p>The shell's top and 2 mm of wall, about 10 minutes. Lay it on your board: the screen should sit square in the window and each tab should click its button.</p><span class="file">fit-test.stl</span></div></li>
+        <li><span class="qty">1</span><div><b>Shell</b><p>Already face down in the file. No supports: both ends slope at 45°.</p><span class="file">shell.stl</span></div></li>
+        <li><span class="qty">1</span><div><b>Back plate</b><p>Flat side down, posts up. No supports.</p><span class="file">back.stl</span></div></li>
+      </ul>
+    </section>
+
+    <div class="note" role="note">
+      <p><b>Plain PLA or PETG, not carbon fibre.</b> The carbon-fibre filaments that suit this printer are slightly conductive and would choke the ESP32's Bluetooth.</p>
+      <p>0.2 mm layers, 3 walls, 20% infill. Print the fit test before the shell: it shows in 10 minutes what the shell would show in 2 hours.</p>
+    </div>
+
+    <section>
+      <h2>You also need</h2>
+      <ul class="print">
+        <li><span class="qty">2</span><div><b>M2.5 × 5 mm countersunk screws</b><p>Flat head, sits flush in the back. They go in from the back, into the two 12 o'clock lugs. A hook holds the other end.</p></div></li>
+        <li><span class="qty">1</span><div><b>Clear sheet, optional</b><p>36 × 21 mm, up to 0.5 mm thick, cut from clear packaging. It sits in a pocket inside the top and keeps sweat off the screen.</p></div></li>
+        <li><span class="qty">1</span><div><b>20 mm strap</b><p>Your velcro strap threads through the two slots, under the back plate.</p></div></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Put it together</h2>
+      <ol class="steps">
+        <li>If you cut a clear sheet, drop it into the pocket inside the top.</li>
+        <li>Lower the finished board in face down, USB toward the side opening. The screen sits under the window.</li>
+        <li>Hook the back plate's 6 o'clock lip into the groove in that wall, then swing the plate shut. Its posts land on c1 r1 and c18 r1.</li>
+        <li>Drive the two screws in gently: they cut their own thread in the plastic.</li>
+        <li>Thread the strap through both slots.</li>
+      </ol>
+    </section>
+
+    <div class="note" role="note">
+      <p><b>Measure before printing.</b> The sizes are typical part sizes, not measured from your parts. Check the OLED module (35.4 × 33.5 mm), the tallest point of the slider lever (8 mm above the board's underside) and the bottom of the battery.</p>
+      <p>Change them at the top of <span class="file">case/perfboard/case.py</span> and run it again. It checks that nothing collides.</p>
+    </div>
+  </aside>
+
+  <main class="stage" aria-label="3D view of the case">
+    <div class="grid" aria-hidden="true"></div>
+    <canvas id="c"></canvas>
+    <div class="hud top">
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" data-view="angle" aria-pressed="true">Angle</button>
+        <button type="button" data-view="face" aria-pressed="false">Face</button>
+        <button type="button" data-view="back" aria-pressed="false">Back</button>
+        <button type="button" data-view="side" aria-pressed="false">USB side</button>
+      </div>
+      <div class="seg" role="group" aria-label="Shell">
+        <button type="button" id="xray" aria-pressed="false">See inside</button>
+      </div>
+    </div>
+    <div class="expand">
+      <label for="ex">Expand <span id="exv">assembled</span></label>
+      <input id="ex" type="range" min="0" max="1" step="0.001" value="0">
+      <div class="ends"><span>Assembled</span><span>Apart</span></div>
+    </div>
+    <p class="fail" id="fail" hidden>The 3D view needs WebGL. The print sheet on the left has everything you need.</p>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+window.CASE = { glb: "/*GLB*/", dims: /*DIMS*/ };
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const D = window.CASE.dims;
+  $("#dW").textContent = D[0].toFixed(1); $("#dL").textContent = D[1].toFixed(1); $("#dT").textContent = D[2].toFixed(1);
+  if (!window.THREE || !THREE.GLTFLoader) { $("#fail").hidden = false; return; }
+  const canvas = $("#c");
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); } catch (e) { $("#fail").hidden = false; return; }
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(32, 1, 1, 2000);
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.minDistance = 60; controls.maxDistance = 400;
+  scene.add(new THREE.HemisphereLight(0xeaf4f0, 0x0d2125, 0.85));
+  const key = new THREE.DirectionalLight(0xffffff, 0.95); key.position.set(60, 120, 80); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xbfe6ff, 0.35); rim.position.set(-80, -40, -90); scene.add(rim);
+
+  // How far each piece travels when expanded, in mm, and which pieces are the case.
+  const TRAVEL = { "Shell": 22, "Back plate": -18 };
+  const CASE_PARTS = new Set(["Shell", "Back plate"]);
+  const pieces = [];
+  let shellMats = [];
+
+  const bytes = Uint8Array.from(atob(window.CASE.glb), (c) => c.charCodeAt(0));
+  new THREE.GLTFLoader().parse(bytes.buffer, "", (gltf) => {
+    const root = gltf.scene;
+    root.scale.setScalar(1000);                    // the file is in metres
+    scene.add(root); root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(root), centre = box.getCenter(new THREE.Vector3());
+    root.position.sub(centre.multiplyScalar(1));
+    root.updateMatrixWorld(true);
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      const top = topName(o);
+      const m = o.material.clone();
+      m.side = THREE.DoubleSide; m.metalness = /Slider/.test(top) ? 0.7 : 0.05; m.roughness = CASE_PARTS.has(top) ? 0.62 : 0.5;
+      o.material = m;
+      if (top === "Shell") shellMats.push(m);
+      if (CASE_PARTS.has(top)) {
+        const lines = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 28), new THREE.LineBasicMaterial({ color: top === "Back plate" ? 0x9fb4b0 : 0x23383c, transparent: true, opacity: 0.55 }));
+        o.add(lines);
+        if (top === "Shell") shellMats.push(lines.material);
+      }
+    });
+    root.children[0].children.forEach((n) => pieces.push({ node: n, base: n.position.clone(), travel: TRAVEL[clean(n.name)] || 0 }));
+    setView("angle", false); apply(); frame();
+  }, () => { $("#fail").hidden = false; });
+
+  // The loader turns spaces into underscores and numbers repeated names: "Back_plate", "Button_1".
+  const clean = (n) => n.replace(/_\d+$/, "").replace(/_/g, " ");
+  function topName(o) { while (o.parent && o.parent.name !== "UtilWatch") o = o.parent; return clean(o.name); }
+
+  // The glTF root turns CAD's z-up into y-up, so a piece's own z axis is world up.
+  let ex = 0;
+  function apply() {
+    pieces.forEach((p) => { p.node.position.copy(p.base); p.node.position.z += (p.travel / 1000) * ex; });
+    const xr = $("#xray").getAttribute("aria-pressed") === "true";
+    shellMats.forEach((m) => { m.transparent = xr; m.opacity = xr ? (m.isLineBasicMaterial ? 0.35 : 0.22) : (m.isLineBasicMaterial ? 0.55 : 1); m.depthWrite = !xr; m.needsUpdate = true; });
+    $("#exv").textContent = ex < 0.01 ? "assembled" : `${Math.round(ex * 40)} mm apart`;
+  }
+  $("#ex").addEventListener("input", (e) => { ex = +e.target.value; apply(); });
+  $("#xray").addEventListener("click", (e) => { const b = e.currentTarget; b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") === "true" ? "false" : "true"); apply(); });
+
+  // Views: [azimuth, elevation] around the watch. The face looks up (+y), 12 o'clock is -z.
+  const VIEWS = { angle: [0.62, 0.62], face: [0, 1.5], back: [0, -1.5], side: [-1.5707, 0.08] };
+  let tween = null;
+  function setView(name, animate = true) {
+    document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === name)));
+    const [az, el] = VIEWS[name], r = 150;
+    const to = new THREE.Vector3(r * Math.cos(el) * Math.sin(az), r * Math.sin(el), r * Math.cos(el) * Math.cos(az));
+    if (!animate || matchMedia("(prefers-reduced-motion: reduce)").matches) { camera.position.copy(to); controls.target.set(0, 0, 0); controls.update(); return; }
+    tween = { from: camera.position.clone(), to, t: 0 };
+  }
+  document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
+
+  function resize() {
+    const r = canvas.parentElement.getBoundingClientRect();
+    renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix();
+  }
+  addEventListener("resize", resize); resize();
+  function frame() {
+    if (tween) {
+      tween.t = Math.min(1, tween.t + 0.045);
+      const k = 1 - Math.pow(1 - tween.t, 3);
+      camera.position.lerpVectors(tween.from, tween.to, k).setLength(tween.from.length() * (1 - k) + tween.to.length() * k);
+      if (tween.t >= 1) tween = null;
+    }
+    controls.update(); renderer.render(scene, camera); requestAnimationFrame(frame);
+  }
+})();
+</script>

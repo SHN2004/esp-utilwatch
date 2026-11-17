@@ -1,0 +1,991 @@
+<title>UtilWatch Solder Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=Martian+Mono:wdth,wght@87.5,400;87.5,500&display=swap">
+<style>
+/* Layout: a silicone repair mat. The board floats in the middle, build steps on the left, parts on the right. */
+:root {
+  --mat: #10272c; --mat-2: #163239; --mat-3: #1d3e46;
+  --line: rgba(196, 226, 220, .15); --line-2: rgba(196, 226, 220, .3);
+  --silk: #eef3ea; --muted: #a2b8b3;
+  --kapton: #f4ab3c; --kapton-ink: #201503; --kapton-wash: rgba(244, 171, 60, .13);
+  --cut: #ff7d6e;
+  --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Martian Mono", ui-monospace, Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--mat); color: var(--silk); font: 400 14px/1.5 var(--body); overflow: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--kapton); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-columns: minmax(310px, 356px) minmax(0, 1fr) 236px; }
+.side { display: contents; }
+.rail, .legend { background: var(--mat-2); min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--mat-3) transparent; }
+.rail { grid-column: 1; grid-row: 1; border-right: 1px solid var(--line); padding-block: 18px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: 18px; display: flex; flex-direction: column; gap: 16px; }
+.legend { grid-column: 3; grid-row: 1; border-left: 1px solid var(--line); padding-block: 18px; padding-left: 14px; padding-right: max(14px, env(safe-area-inset-right, 0px)); }
+
+.brand { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.brand b { font: 800 22px/1 var(--display); letter-spacing: .02em; text-transform: uppercase; }
+.brand span { font: 400 10px/1.3 var(--mono); color: var(--muted); text-align: right; }
+
+.now { display: grid; gap: 12px; }
+.now .count { font: 500 11px/1 var(--mono); color: var(--kapton); font-variant-numeric: tabular-nums; }
+.now h1 { margin: 0; font: 800 38px/1 var(--display); text-wrap: balance; letter-spacing: .005em; }
+.now p { margin: 0; max-width: 62ch; }
+.warn { border-left: 3px solid var(--kapton); background: var(--kapton-wash); padding: 9px 12px; }
+.warn.danger { border-color: var(--cut); background: rgba(255, 125, 110, .12); }
+
+.rows { display: grid; gap: 1px; background: var(--line); border-block: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 9px; align-items: center; width: 100%; text-align: left; padding: 8px 6px; background: var(--mat-2); transition: background-color 120ms ease; }
+.row .sw, .lrow .sw { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .25); }
+.row .where { font: 500 11px/1.4 var(--mono); display: block; }
+.row .what { color: var(--muted); font-size: 12px; line-height: 1.35; display: block; }
+@media (hover: hover) and (pointer: fine) { .row:hover { background: var(--mat-3); } }
+
+.nav { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+.btn { padding: 11px 16px; border: 1px solid var(--line-2); font-weight: 600; border-radius: 3px; transition: transform 140ms var(--ease-out), background-color 120ms ease, opacity 120ms ease; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .35; cursor: default; transform: none; }
+.btn.go { background: var(--kapton); color: var(--kapton-ink); border-color: var(--kapton); }
+@media (hover: hover) and (pointer: fine) { .btn:not(.go):not(:disabled):hover { background: var(--mat-3); } .btn.go:hover { background: #ffbc55; } }
+
+.steps { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.steps button { width: 100%; display: grid; grid-template-columns: 26px 1fr; text-align: left; padding: 7px 4px; color: var(--muted); font-size: 13px; line-height: 1.3; border-bottom: 1px solid var(--line); transition: background-color 120ms ease, color 120ms ease; }
+.steps .n { font: 400 11px/1.6 var(--mono); font-variant-numeric: tabular-nums; }
+.steps .done { color: var(--silk); }
+.steps [aria-current="step"] { color: var(--kapton-ink); background: var(--kapton); font-weight: 600; }
+@media (hover: hover) and (pointer: fine) { .steps button:not([aria-current="step"]):hover { background: var(--mat-3); color: var(--silk); } }
+
+.legend h2 { margin: 0 0 6px; font: 500 10px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.legend ul { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 1px; }
+.lrow { display: grid; grid-template-columns: minmax(0, 1fr) 28px; align-items: stretch; border-radius: 3px; transition: background-color 120ms ease; }
+.lrow.sel { background: var(--kapton-wash); box-shadow: inset 0 0 0 1px var(--kapton); }
+.lrow .pick { display: flex; align-items: center; gap: 8px; text-align: left; padding: 6px; font-size: 13px; line-height: 1.25; min-width: 0; }
+.lrow .pick small { display: block; font: 400 10px/1.3 var(--mono); color: var(--muted); }
+.lrow.later .pick { color: var(--muted); }
+.lrow .eye { display: grid; place-items: center; color: var(--muted); opacity: .75; transition: opacity 120ms ease; }
+.lrow .eye[aria-pressed="false"] { color: var(--cut); opacity: 1; }
+.lrow svg { width: 15px; height: 15px; display: block; }
+@media (hover: hover) and (pointer: fine) { .lrow:hover { background: var(--mat-3); } .lrow .eye:hover { opacity: 1; } }
+.legend .tips { font-size: 12px; color: var(--muted); display: grid; gap: 5px; }
+.legend kbd { font: 400 10px/1 var(--mono); border: 1px solid var(--line-2); border-radius: 3px; padding: 2px 4px; color: var(--silk); }
+
+.stage { grid-column: 2; grid-row: 1; position: relative; min-width: 0; min-height: 0; overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(70, 130, 130, .2), transparent 70%),
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 40px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 40px 100%,
+    var(--mat); }
+#gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#gl.grabbing { cursor: grabbing; }
+#gl.over { cursor: pointer; }
+.pins { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.pin { position: absolute; left: 0; top: 0; font: 500 10px/1 var(--mono); color: var(--kapton-ink); background: var(--kapton); padding: 3px 4px; border-radius: 2px; white-space: nowrap; will-change: transform; }
+
+.hud { position: absolute; display: flex; gap: 8px; pointer-events: none; }
+.hud > * { pointer-events: auto; }
+.top { top: 12px; left: 12px; right: 12px; justify-content: space-between; flex-wrap: wrap; align-items: flex-start; }
+.seg { display: inline-flex; background: rgba(16, 39, 44, .82); border: 1px solid var(--line-2); border-radius: 4px; padding: 2px; backdrop-filter: blur(6px); }
+.seg button { padding: 6px 10px; font-size: 12px; font-weight: 500; line-height: 1.2; border-radius: 2px; color: var(--muted); transition: background-color 120ms ease, color 120ms ease, transform 140ms var(--ease-out); }
+.seg button:active { transform: scale(.97); }
+.seg button[aria-pressed="true"] { background: var(--silk); color: var(--mat); }
+@media (hover: hover) and (pointer: fine) { .seg button[aria-pressed="false"]:hover { color: var(--silk); } }
+
+.xp { left: 50%; bottom: 14px; transform: translateX(-50%); width: min(460px, calc(100% - 24px)); flex-direction: column; gap: 3px; background: rgba(16, 39, 44, .82); border: 1px solid var(--line-2); border-radius: 4px; padding: 7px 12px 8px; backdrop-filter: blur(6px); }
+.xp-head { display: flex; justify-content: space-between; align-items: baseline; font: 500 10px/1.2 var(--mono); color: var(--muted); }
+.xp-head label { color: var(--silk); letter-spacing: .08em; text-transform: uppercase; }
+.xp-head output { font-variant-numeric: tabular-nums; }
+#expand { -webkit-appearance: none; appearance: none; width: 100%; height: 26px; margin: 0; background: transparent; cursor: ew-resize; --v: 0%; }
+#expand::-webkit-slider-runnable-track { height: 8px; border-radius: 2px; border: 1px solid var(--line-2); background: linear-gradient(90deg, var(--kapton) var(--v), #0a1b1f var(--v)); }
+#expand::-moz-range-track { height: 8px; border-radius: 2px; border: 1px solid var(--line-2); background: linear-gradient(90deg, var(--kapton) var(--v), #0a1b1f var(--v)); }
+#expand::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 22px; margin-top: -8px; border: 1px solid #3a4246; border-radius: 3px; background: repeating-linear-gradient(90deg, #dfe3df 0 2px, #9ba3a2 2px 4px); box-shadow: 0 1px 3px rgba(0, 0, 0, .5); transition: transform 120ms var(--ease-out); }
+#expand::-moz-range-thumb { width: 32px; height: 20px; border: 1px solid #3a4246; border-radius: 3px; background: repeating-linear-gradient(90deg, #dfe3df 0 2px, #9ba3a2 2px 4px); box-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+#expand:active::-webkit-slider-thumb { transform: scale(.96); }
+.ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); line-height: 1.1; }
+
+.scale { position: absolute; left: 14px; bottom: 16px; font: 400 10px/1 var(--mono); color: var(--muted); pointer-events: none; }
+.scale i { display: block; height: 5px; border: 1px solid var(--muted); border-top: 0; margin-bottom: 4px; width: 40px; }
+
+.card { position: absolute; top: 56px; right: 12px; width: min(258px, calc(100% - 24px)); max-height: calc(100% - 150px); overflow-y: auto; background: rgba(16, 39, 44, .94); border: 1px solid var(--kapton); border-radius: 4px; padding: 11px 12px; display: grid; gap: 6px; transition: opacity 140ms ease, transform 180ms var(--ease-out); backdrop-filter: blur(6px); }
+.card[data-off="true"] { opacity: 0; transform: translateY(-4px) scale(.98); pointer-events: none; visibility: hidden; }
+.card h3 { margin: 0; padding-right: 22px; font: 700 21px/1.05 var(--display); }
+.card p { margin: 0; font-size: 13px; line-height: 1.42; }
+.card .x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; color: var(--muted); font-size: 17px; line-height: 1; }
+.card ul { list-style: none; margin: 0; padding: 0; font: 400 10.5px/1.5 var(--mono); color: var(--muted); }
+
+.tip { position: absolute; left: 0; top: 0; pointer-events: none; background: var(--silk); color: var(--mat); padding: 4px 7px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 1.25; max-width: 240px; opacity: 0; transition: opacity 120ms ease; z-index: 3; }
+.tip.on { opacity: 1; }
+.tip small { display: block; font: 400 10px/1.3 var(--mono); }
+
+.fail { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); }
+.fail[hidden] { display: none; }
+
+@media (max-width: 1080px) {
+  .app { grid-template-columns: minmax(300px, 340px) minmax(0, 1fr); }
+  .side { display: block; grid-column: 1; grid-row: 1; min-height: 0; overflow-y: auto; background: var(--mat-2); border-right: 1px solid var(--line); }
+  .rail, .legend { overflow: visible; border: 0; }
+  .legend { padding-inline: 18px; padding-right: 18px; border-top: 1px solid var(--line); }
+  .legend ul { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .stage { grid-column: 2; }
+}
+@media (max-width: 720px) {
+  .app { display: flex; flex-direction: column; }
+  .stage { order: -1; flex: 0 0 56%; min-height: 330px; }
+  .side { flex: 1 1 0; border: 0; border-top: 1px solid var(--line-2); padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
+  .rail { padding-inline: 16px; }
+  .legend { padding-inline: 16px; }
+  .brand span { display: none; }
+  .now h1 { font-size: 32px; }
+  .top { top: 8px; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); }
+  .seg button { padding: 6px 8px; }
+  .scale { display: none; }
+  .xp { bottom: 8px; }
+  .card { top: auto; bottom: 88px; right: max(8px, env(safe-area-inset-right, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); width: auto; max-height: 45%; }
+  .tips { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .seg button, .card, #expand::-webkit-slider-thumb { transition: none; }
+}
+</style>
+
+<div class="app">
+  <div class="side">
+    <section class="rail" aria-label="Build steps">
+      <div class="brand"><b>UtilWatch solder map</b><span>one port</span></div>
+      <div class="now" id="now" aria-live="polite"></div>
+      <div class="nav">
+        <button class="btn" id="prev" type="button">Back</button>
+        <button class="btn go" id="next" type="button">Next step</button>
+      </div>
+      <ol class="steps" id="steps"></ol>
+    </section>
+    <section class="legend" aria-label="Parts and wires">
+      <h2>Parts</h2><ul id="lparts"></ul>
+      <h2>Wires</h2><ul id="lwires"></ul>
+      <h2>Controls</h2>
+      <div class="tips">
+        <div>Drag to orbit. Right-drag to pan. Scroll to zoom.</div>
+        <div>Hover the board to read any hole. Click a part to isolate it.</div>
+        <div><kbd>←</kbd> <kbd>→</kbd> steps &nbsp; <kbd>1</kbd>–<kbd>4</kbd> views &nbsp; <kbd>E</kbd> expand &nbsp; <kbd>Esc</kbd> clear</div>
+      </div>
+    </section>
+  </div>
+  <main class="stage" id="stage">
+    <canvas id="gl" role="img" aria-label="3D model of the watch on its perfboard. The build steps list the same information as text."></canvas>
+    <div class="pins" id="pins"></div>
+    <div class="hud top">
+      <div class="seg" role="group" aria-label="What to show">
+        <button type="button" id="mStep" aria-pressed="true">This step</button>
+        <button type="button" id="mAll" aria-pressed="false">Finished</button>
+      </div>
+      <div class="seg" role="group" aria-label="Camera view" id="views">
+        <button type="button" data-view="angle" aria-pressed="false">Angle</button>
+        <button type="button" data-view="top" aria-pressed="false">Top</button>
+        <button type="button" data-view="under" aria-pressed="false">Underside</button>
+        <button type="button" data-view="side" aria-pressed="false">Side</button>
+      </div>
+    </div>
+    <aside class="card" id="card" data-off="true" aria-live="polite">
+      <button class="x" id="cardX" type="button" aria-label="Clear selection">×</button>
+      <h3 id="cardT"></h3><p id="cardD"></p><ul id="cardL"></ul>
+    </aside>
+    <div class="hud xp">
+      <div class="xp-head"><label for="expand">Expand</label><output id="xpOut" for="expand"></output></div>
+      <input id="expand" type="range" min="0" max="100" step="1" value="0">
+      <div class="ends"><span>Assembled</span><span>Exploded</span></div>
+    </div>
+    <div class="scale" aria-hidden="true"><i id="scaleBar"></i>10 mm</div>
+    <div class="tip" id="tip"></div>
+    <div class="fail" id="fail" hidden></div>
+  </main>
+</div>
+
+<!-- Same holes as the one-port PDF. c = column from the left, r = row from 12 o'clock, seen from the top.
+     "top" wires start on the OLED's own solder joint above that hole. "via" is the free hole a wire comes up through. -->
+<script type="application/json" id="wiring">
+[
+  {"id":"w_sda","from":[6,14],"to":[5,15],"side":"top","label":"OLED SDA to GPIO19","color":"#4f93ff","links":["oled","esp"]},
+  {"id":"w_scl","from":[7,14],"to":[4,15],"side":"top","label":"OLED SCL to GPIO20","color":"#b47bff","links":["oled","esp"]},
+  {"id":"w_gnd","from":[8,14],"to":[2,15],"side":"top","label":"OLED GND to GND","color":"#747d82","links":["oled","esp"]},
+  {"id":"w_vcc","from":[9,14],"to":[3,15],"side":"top","label":"OLED VCC to 3V3","color":"#e5484d","links":["oled","esp"]},
+  {"id":"w_up","from":[16,2],"to":[9,15],"via":[11,15],"label":"Up to GPIO9","color":"#2fbf71","links":["btnUp","esp"]},
+  {"id":"w_sel","from":[16,6],"to":[8,15],"via":[12,15],"label":"Select to GPIO14","color":"#46d48a","links":["btnSel","esp"]},
+  {"id":"w_down","from":[16,10],"to":[6,15],"via":[13,15],"label":"Down to GPIO18","color":"#1fa35d","links":["btnDown","esp"]},
+  {"id":"w_g1","from":[18,5],"to":[18,9],"label":"Up ground leg to Select ground leg","color":"#747d82","links":["btnUp","btnSel"]},
+  {"id":"w_g2","from":[18,9],"to":[18,13],"label":"Select ground leg to Down ground leg","color":"#747d82","links":["btnSel","btnDown"]}
+]
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const P = 2.54, COLS = 18, ROWS = 15, W = COLS * P, H = ROWS * P;
+  const hx = (c) => 1.27 + P * (c - 1), hz = (r) => 1.27 + P * (r - 1);
+  const WIRING = JSON.parse($("#wiring").textContent);
+  const ACCENT = 0xf4ab3c, CUT = 0xff7d6e;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // How far each layer travels, in mm, at full expand.
+  const LAY = { none: 0, board: 0, oled: 28, top: 13, wires: -8, kap: -4, esp: -20, posts: -13, foam: -27, cell: -34 };
+  const TOP_Y = 8, BOTTOM_Y = -6.7, TOP_X = 28, BOTTOM_X = 34;  // model extents and their travel
+
+  // A hole to solder or check. Layer says what it moves with when expanded.
+  const J = (c, r, name, side = "under", layer = "board") => ({ x: hx(c), z: hz(r), y: side === "top" ? 1.62 : -0.02, name, layer, side, key: "c" + c + " r" + r });
+  const PAD = (x, z, y, layer, name) => ({ x, z, y, layer, name, side: "pad" });
+  const col = (r, cs, names, side) => cs.map((c, i) => J(c, r, names[i], side));
+
+  const EXTRA = [
+    { id: "w_padm", where: "c18 r13 → ESP32 B− pad", what: "Ground. Solder to the pad before fitting the ESP32", color: "#12a5b0", links: ["esp", "btnDown"], label: "Ground chain to ESP32 B− pad" },
+    { id: "w_padp", where: "c18 r14 → ESP32 B+ pad", what: "Slider outer pin. Solder to the pad before fitting the ESP32", color: "#ff9538", links: ["esp", "slider"], label: "Slider outer pin to ESP32 B+ pad" },
+    { id: "w_rp", where: "100k resistor → ESP32 B+ pad", what: "Shares the pad with the B+ wire. Sleeve the leg", color: "#ffbf80", links: ["esp", "divider"], label: "100k leg to ESP32 B+ pad" },
+    { id: "w_rm", where: "100k resistor → ESP32 B− pad", what: "Shares the pad with the B− wire. Sleeve the leg", color: "#6fd3da", links: ["esp", "divider"], label: "100k leg to ESP32 B− pad" },
+    { id: "w_sense", where: "Resistors' twisted legs → GPIO6, ESP32's wrist side", what: "Battery level: the pin sees half the battery voltage", color: "#f2d24b", links: ["esp", "divider"], label: "Resistor midpoint to GPIO6" },
+    { id: "w_batm", where: "Battery − → c18 r13", what: "Check polarity with a meter", color: "#747d82", links: ["cell", "btnDown"], label: "Battery − to the ground chain" },
+    { id: "w_batp", where: "Battery + → c17 r14", what: "Slider middle pin. Solder last, slider off", color: "#e5484d", links: ["cell", "slider"], label: "Battery + to slider middle pin" },
+  ];
+  const WIRE = {};
+  const hn = (k) => `c${k[0]} r${k[1]}`;
+  WIRING.forEach((w) => {
+    WIRE[w.id] = Object.assign(w, {
+      where: w.side === "top" ? `OLED's own c${w.from[0]} joint → ${hn(w.to)}, top side` : w.via ? `${hn(w.from)} → up through ${hn(w.via)} → ${hn(w.to)}` : `${hn(w.from)} → ${hn(w.to)}`,
+      what: w.label,
+    });
+  });
+  EXTRA.forEach((w) => (WIRE[w.id] = w));
+
+  const R15 = ["5V", "GND", "3V3", "IO20", "IO19", "IO18", "IO15", "IO14", "IO9", "IO8"];
+  const OLED_JOINT = (c, name) => PAD(hx(c), hz(14), 5.6, "oled", name);
+  const STEPS = [
+    {
+      t: "Check the OLED", view: "top", x: 0, adds: ["board", "oled"], focus: ["oled"],
+      solder: col(14, [6, 7, 8, 9], ["SDA", "SCL", "GND", "VCC"]),
+      text: "Your OLED is already on the board with its header in c6–c9, row 14, at the 6 o'clock edge. Turned around, its pins now read SDA, SCL, GND, VCC from left to right.",
+      note: "Compare this with the names printed on your module. If the header is in other holes, the rest of this map won't line up.",
+    },
+    {
+      t: "Solder the buttons and slider", view: "angle", x: 0.18, adds: ["btnUp", "btnSel", "btnDown", "slider"], focus: ["btnUp", "btnSel", "btnDown", "slider"],
+      solder: [
+        ...[2, 6, 10].flatMap((r) => [J(16, r, "sig"), J(18, r, ""), J(16, r + 3, ""), J(18, r + 3, "GND")]),
+        J(16, 14, ""), J(17, 14, "BAT+"), J(18, 14, "B+"),
+      ],
+      text: "Push the three buttons in from the top, with their legs in columns 16 and 18. The slider goes in c16–c18, row 14. Solder them on the underside, then trim the legs.",
+      note: "The wires use diagonal legs: top-left and bottom-right on each button. Those two always switch, whichever way the button is turned. Leave c18 r1 empty and keep the joint at c18 r2 small: a post of the case lands there.",
+    },
+    {
+      t: "Trim the pins", view: "underAngle", x: 0.62, adds: ["esp"], ghosts: ["pinCut", "oledCut"], focus: ["pinCut", "oledCut", "esp"],
+      text: "Three cuts, shown in red. On the ESP32, cut the 5V row's pins to 3.6 mm past the plastic and the TX row's pins to 1.4 mm. On the board, clip the OLED's four pins to 1.5 mm.",
+      note: "The 5V row then stands 2 mm above the board, low enough to pass under the OLED. The TX row becomes stubs that sit inside the holes. Measure before you cut: these can't be undone.",
+    },
+    {
+      t: "Add the battery wires and resistors", view: "gap", x: 0.62, adds: ["w_padp", "w_padm", "w_rp", "w_rm", "divider", "kapOled"], focus: ["w_padp", "w_padm", "w_rp", "w_rm", "divider", "kapOled"],
+      wires: ["w_padp", "w_padm", "w_rp", "w_rm"],
+      solder: [PAD(4.5, 26, -2.5, "esp", "B+"), PAD(4.5, 29, -2.5, "esp", "B−")],
+      text: "On the ESP32's back, the side that will face the board, solder a 60 mm wire to the B+ pad and another to the B− pad, and mark which is which. Slide 1 mm heat shrink onto one leg of each 100k resistor, right up to the body, then solder those legs to the same two pads. Then put Kapton over the OLED's clipped pins on the board.",
+      note: "The sleeve can't go on afterwards: the resistor's body is in the way. Use the 100k resistors, not the 10k ones: 10k drains the battery ten times faster. The pad positions here are only an example: find B+ and B− on your own board.",
+    },
+    {
+      t: "Join the resistors to GPIO6", view: "underAngle", x: 0.62, adds: ["w_sense"], focus: ["w_sense", "divider"],
+      wires: ["w_sense"],
+      solder: [PAD(21.59, 21.59, -3.6, "esp", "IO6")],
+      text: "Still on the bench, with the ESP32 loose. Slide 2 mm heat shrink onto a 30 mm wire. Twist the two resistors' free legs around that wire's end, solder, then shrink the sleeve over the joint. Solder the wire's other end to GPIO6: the second-to-last pin of the TX row, on the parts side of the ESP32.",
+      note: "Check with a meter: the B+ wire to GPIO6 reads about 100k, and GPIO6 to the B− wire about 100k. The last pin is GPIO7: leave it alone. With the slider off, the resistors draw nothing.",
+    },
+    {
+      t: "Fit the ESP32", view: "topFront", x: 0, adds: [], focus: ["esp"],
+      solder: col(15, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], R15, "top"),
+      text: "Hang the ESP32 under the board with its parts facing your wrist and USB at 9 o'clock. The 5V row comes up through c1–c10 in row 15, and the stubs drop into row 9. Lead the two battery wires out past the far end and lay the resistors flat there, beside the battery's edge, with the GPIO6 wire wrapping round the end. Keep them all off c12–c13, r11–r12: a block of the case lands there. Solder row 15 from the top, coming in with the iron from the 6 o'clock edge.",
+      note: "Solder the two end pins first, check the ESP32 sits flat, then do the rest. Nothing is hidden under it, so you can test after every step from here on.",
+    },
+    {
+      t: "Wire the OLED on top", view: "topFront", x: 0, zoom: 1.5, look: [13, 33], adds: ["w_sda", "w_scl", "w_gnd", "w_vcc"], focus: ["w_sda", "w_scl", "w_gnd", "w_vcc"],
+      wires: ["w_sda", "w_scl", "w_gnd", "w_vcc"], screen: true,
+      solder: [OLED_JOINT(6, "SDA"), OLED_JOINT(7, "SCL"), OLED_JOINT(8, "GND"), OLED_JOINT(9, "VCC")],
+      marks: [J(5, 15, "IO19", "top"), J(4, 15, "IO20", "top"), J(2, 15, "GND", "top"), J(3, 15, "3V3", "top")],
+      text: "Four short wires on the top face. Each runs from one of the OLED's own solder joints down to a row 15 pin. Then flash the firmware and plug in USB: the screen should light and read upright.",
+      note: "Before you power it, check with a meter that no two neighbouring row 15 joints are bridged. Once the screen works, put a dab of epoxy on the stub row near the USB end.",
+    },
+    {
+      t: "Wire the buttons", view: "under", x: 0, adds: ["w_up", "w_sel", "w_down"], focus: ["w_up", "w_sel", "w_down"],
+      wires: ["w_up", "w_sel", "w_down"],
+      solder: [J(16, 2, "Up"), J(16, 6, "Sel"), J(16, 10, "Down")],
+      marks: [J(11, 15, "Up"), J(12, 15, "Sel"), J(13, 15, "Down"), J(9, 15, "IO9", "top"), J(8, 15, "IO14", "top"), J(6, 15, "IO18", "top")],
+      text: "Each button wire starts at its signal leg underneath and runs down beside where the battery will sit. It comes up through a free hole in row 15, then follows the 6 o'clock edge on top to its pin.",
+      note: "Up is on GPIO9, which is also the ESP32's BOOT pin. Hold Up while plugging in USB to enter flash mode.",
+    },
+    {
+      t: "Chain the grounds", view: "under", x: 0, adds: ["w_g1", "w_g2"], focus: ["w_g1", "w_g2", "w_padm"],
+      wires: ["w_g1", "w_g2", "w_padm"],
+      solder: [J(18, 5, "GND"), J(18, 9, "GND"), J(18, 13, "GND")],
+      text: "Link the three button ground legs along column 18. Solder the loose B− wire from the ESP32 to the last one, c18 r13. Then test on USB: all three buttons should work.",
+    },
+    {
+      t: "Connect B+ to the slider", view: "underAngle2", x: 0, adds: [], focus: ["w_padp", "slider"],
+      wires: ["w_padp"], solder: [J(18, 14, "B+")], marks: [J(18, 13, "GND")],
+      text: "Solder the loose B+ wire to the slider's outer pin, c18 r14. With USB plugged in, measure between c18 r14 and c18 r13. It should read about 4.2 V.",
+      note: "If it reads more than 4.25 V, stop and don't connect the battery.",
+      danger: true,
+    },
+    {
+      t: "Connect the battery", view: "underAngle", x: 0.3, adds: ["foam", "cell", "w_batm", "w_batp"], focus: ["cell", "foam", "w_batm", "w_batp"],
+      wires: ["w_batm", "w_batp"],
+      solder: [J(18, 13, "BAT−"), J(17, 14, "BAT+")],
+      text: "Unplug USB and turn the slider off. Stick the battery on thin foam tape with its leads toward 3 o'clock. Cut and solder one lead at a time, so the two bare ends never touch: battery − to c18 r13 first, then battery + to the slider's middle pin, c17 r14.",
+      note: "Check polarity with a meter before you solder: red isn't always +. Tape and battery together must stay under 5.7 mm, so use tape no thicker than 0.7 mm. This power path hasn't been tested on real hardware yet.",
+      danger: true,
+    },
+    {
+      t: "Check where the case lands", view: "underAngle2", x: 0.2, adds: ["posts"], focus: ["posts"],
+      marks: [J(1, 1, "post"), J(18, 1, "post")],
+      text: "Nothing to solder here. The printed back plate has its own two posts and a block. They land on c1 r1, on c18 r1, and beside the ESP32 at c12–c13, r11–r12. Check that no wire or solder blob sits on those three spots, then follow the case page to close it up.",
+      note: "If the plate won't close flat, a wire is under a post or the battery tape is too thick. Don't force it: it would press on the battery.",
+    },
+    {
+      t: "Finished board", view: "angle", x: 0, adds: [], focus: [], screen: true,
+      text: "Everything is on. Drag Expand to check the stack, or click any part to see what it connects to.",
+      note: "One port does both jobs: plug USB into the ESP32 at 9 o'clock to charge or to flash. The slider must be on to charge. On USB the battery icon reads full.",
+    },
+  ];
+
+  const NAMES = {
+    board: ["Perfboard", "18 × 15 holes, about 46 × 38 mm. Double-sided, 2.54 mm pitch."],
+    oled: ["1.3\" OLED", "SH1106 on I2C. Rotated 180°, so the firmware uses U8G2_R2. Pins at c6–c9, r14."],
+    btnUp: ["Up button", "Signal leg c16 r2 to GPIO9, ground leg c18 r5. Also the BOOT button."],
+    btnSel: ["Select button", "Signal leg c16 r6 to GPIO14, ground leg c18 r9."],
+    btnDown: ["Down button", "Signal leg c16 r10 to GPIO18, ground leg c18 r13."],
+    slider: ["Power slider", "SS-12F23 in c16–c18, r14. Battery + on the middle pin, ESP32 B+ on the outer pin."],
+    esp: ["ESP32-C6 SuperMini", "Hangs under the board, parts toward your wrist. The 5V row is soldered through row 15. The TX row's stubs sit unsoldered in row 9. The battery goes to the B+ and B− pads on its back."],
+    cell: ["502030P LiPo", "32 × 20 × 5 mm, 250 mAh, protection board built in. No pins may touch it."],
+    foam: ["Foam tape", "Holds the battery and lifts it clear of the board."],
+    kapOled: ["Kapton, OLED pins", "Insulates the OLED's clipped pins from the back of the ESP32."],
+    posts: ["Back plate posts", "Part of the printed back plate, not loose parts: two posts at c1 r1 and c18 r1 and a block beside the ESP32. They carry the plate so the strap doesn't press on the battery."],
+    oledCut: ["Cut off", "Clip these pins to 1.5 mm or less."],
+    divider: ["Two 100k resistors", "Lie flat past the ESP32's far end. One sleeved leg each to B+ and B−, the other legs twisted together and wired to GPIO6. They halve the battery voltage so the ESP32 can read it."],
+    pinCut: ["Cut off", "Cut the 5V row to 3.6 mm past the plastic and the TX row to 1.4 mm."],
+  };
+
+  /* ---------- Text panels work even if 3D doesn't load ---------- */
+  let cur = 0, mode = "step", selected = null, rowHover = null, onStateChange = () => {};
+  try { const s = +localStorage.getItem("utilwatch-step-v4"); if (s >= 0 && s < STEPS.length) cur = s; } catch (e) {}
+  const whenAdded = {};
+  STEPS.forEach((s, i) => { (s.adds || []).forEach((a) => (whenAdded[a] = i)); });
+
+  $("#steps").innerHTML = STEPS.map((s, i) => `<li><button type="button" data-i="${i}"><span class="n">${String(i + 1).padStart(2, "0")}</span><span>${s.t}</span></button></li>`).join("");
+
+  function renderNow() {
+    const s = STEPS[cur];
+    const rows = (s.wires || []).map((id) => {
+      const w = WIRE[id];
+      return `<button class="row" type="button" data-part="${id}"><span class="sw" style="background:${w.color}"></span><span><span class="where">${w.where}</span><span class="what">${w.what}</span></span></button>`;
+    }).join("");
+    $("#now").innerHTML = `<div class="count">STEP ${String(cur + 1).padStart(2, "0")} OF ${STEPS.length}</div><h1>${s.t}</h1><p>${s.text}</p>` +
+      (rows ? `<div class="rows">${rows}</div>` : "") +
+      (s.note ? `<div class="warn${s.danger ? " danger" : ""}">${s.note}</div>` : "");
+    $("#prev").disabled = cur === 0;
+    $("#next").disabled = cur === STEPS.length - 1;
+    $("#next").textContent = cur === STEPS.length - 1 ? "Last step" : "Next step";
+    document.querySelectorAll("#steps button").forEach((b, i) => {
+      b.classList.toggle("done", i < cur);
+      if (i === cur) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+    });
+    $(".rail").scrollTop = 0; $(".side").scrollTop = 0;  // the step's own text is what you came for
+    try { localStorage.setItem("utilwatch-step-v4", cur); } catch (e) {}
+  }
+
+  const eyeOn = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1 8s2.6-4.5 7-4.5S15 8 15 8s-2.6 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg>';
+  const eyeOff = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 2l12 12M4 5C2.2 6.2 1 8 1 8s2.6 4.5 7 4.5c1.3 0 2.5-.4 3.5-1M7 3.6c.3 0 .7-.1 1-.1 4.4 0 7 4.5 7 4.5s-.7 1.2-2 2.4"/></svg>';
+  const LEG_PARTS = ["oled", "board", "btnUp", "btnSel", "btnDown", "slider", "esp", "divider", "cell", "kapOled", "foam", "posts"];
+  const swatch = { oled: "#1e3a9a", board: "#1f7a55", btnUp: "#2b2e32", btnSel: "#2b2e32", btnDown: "#2b2e32", slider: "#c2c6c8", esp: "#14171a", cell: "#b9bfc2", kapOled: "#e2951e", foam: "#e6e2d6", posts: "#c9a227", divider: "#d9c39a" };
+  const row = (id, name, color) => `<li class="lrow" data-part="${id}"><button class="pick" type="button"><span class="sw" style="background:${color}"></span><span>${name}</span></button><button class="eye" type="button" aria-label="Hide ${name}" aria-pressed="true">${eyeOn}</button></li>`;
+  $("#lparts").innerHTML = LEG_PARTS.map((id) => row(id, NAMES[id][0], swatch[id])).join("");
+  $("#lwires").innerHTML = Object.keys(WIRE).map((id) => row(id, WIRE[id].label.replace(" ground leg", " GND").replace(" pin", ""), WIRE[id].color)).join("");
+
+  function fail(msg) { const f = $("#fail"); f.hidden = false; f.textContent = msg; }
+
+  function setStep(i, opt) { cur = Math.max(0, Math.min(STEPS.length - 1, i)); renderNow(); onStateChange("step", opt || {}); }
+  $("#prev").addEventListener("click", () => setStep(cur - 1));
+  $("#next").addEventListener("click", () => setStep(cur + 1));
+  $("#steps").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setStep(+b.dataset.i); });
+  renderNow();
+
+  if (!window.THREE || !THREE.OrbitControls) { fail("The 3D library didn't load. Check your connection and reload. The build steps still work."); return; }
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas: $("#gl"), antialias: true, alpha: true }); }
+  catch (e) { fail("This browser couldn't start WebGL, so the 3D view is off. The build steps still work."); return; }
+
+  /* ---------- Scene ---------- */
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  const scene = new THREE.Scene();
+  const pm = new THREE.PMREMGenerator(renderer);
+  // A dim room with two strip lights set off-axis, so flat boards don't glare when seen from straight above.
+  const envScene = new THREE.Scene();
+  const domeGeo = new THREE.SphereGeometry(20, 24, 16), domeCol = [];
+  for (let i = 0, a = domeGeo.attributes.position; i < a.count; i++) { const t = a.getY(i) / 40 + 0.5, v = 0.08 + 0.42 * t; domeCol.push(v * 0.92, v, v * 1.02); }
+  domeGeo.setAttribute("color", new THREE.Float32BufferAttribute(domeCol, 3));
+  envScene.add(new THREE.Mesh(domeGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  [[-13, 9, 4, 5, 3, 14], [13, -7, -6, 5, 3, 14], [0, 8, -13, 14, 3, 4]].forEach(([x, y, z, w, h, d]) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 4.8, 4.5) })); m.position.set(x, y, z); m.lookAt(0, 0, 0); envScene.add(m);
+  });
+  scene.environment = pm.fromScene(envScene, 0.03).texture;
+  const key = new THREE.DirectionalLight(0xfff2e0, 0.85); key.position.set(80, 60, 70); scene.add(key);
+  const under = new THREE.DirectionalLight(0xdcefff, 0.7); under.position.set(-80, -55, -70); scene.add(under);
+
+  const FOV = 26;
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 4, 1600);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = 0.09;
+  controls.rotateSpeed = 0.85; controls.zoomSpeed = 0.9; controls.panSpeed = 0.9;
+  controls.minDistance = 25; controls.maxDistance = 620; controls.minPolarAngle = 0; controls.maxPolarAngle = Math.PI;
+
+  /* ---------- Part helpers ---------- */
+  const parts = {}, pickables = [];
+  function makePart(id, layer, opts = {}) {
+    const g = new THREE.Group(); scene.add(g);
+    const p = { id, layer, group: g, mats: new Map(), edgeMat: null, a: 1, h: 0, ta: 1, th: 0, hidden: false, ghost: !!opts.ghost, isWire: !!opts.wire };
+    parts[id] = p; return p;
+  }
+  function mat(p, o) {
+    const key = JSON.stringify([o.color, o.metal, o.rough, o.op, o.emis, o.basic]) + (o.map ? o.map.uuid : "");
+    if (p.mats.has(key)) return p.mats.get(key);
+    const base = o.op === undefined ? 1 : o.op;
+    const m = o.basic
+      ? new THREE.MeshBasicMaterial({ color: o.color === undefined ? 0xffffff : o.color, map: o.map || null, transparent: true, opacity: base, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })
+      : new THREE.MeshStandardMaterial({ color: o.color, metalness: o.metal || 0, roughness: o.rough === undefined ? 0.7 : o.rough, transparent: base < 1, opacity: base, depthWrite: base >= 1, emissive: o.emis === undefined ? 0 : o.emis, emissiveIntensity: o.emis === undefined ? 0 : 0.4, map: o.map || null, envMapIntensity: 1 });
+    m.userData = { base, baseEmis: m.emissive ? m.emissive.clone() : null, baseEI: m.emissiveIntensity || 0, basic: !!o.basic };
+    p.mats.set(key, m); return m;
+  }
+  function add(p, geom, m, x, y, z, opts = {}) {
+    const mesh = new THREE.Mesh(geom, m); mesh.position.set(x, y, z); mesh.userData.part = p.id; p.group.add(mesh);
+    if (!opts.nopick) pickables.push(mesh);
+    if (opts.edges) {
+      if (!p.edgeMat) p.edgeMat = new THREE.LineBasicMaterial({ color: 0xeef3ea, transparent: true, opacity: 0.2 });
+      const l = new THREE.LineSegments(new THREE.EdgesGeometry(geom, 25), p.edgeMat); l.position.copy(mesh.position); l.rotation.copy(mesh.rotation); p.group.add(l);
+    }
+    return mesh;
+  }
+  const box = (p, m, x0, x1, y0, y1, z0, z1, edges = true) => add(p, new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, { edges });
+  const cyl = (p, m, x, y0, y1, z, r, seg = 16, nopick = false) => add(p, new THREE.CylinderGeometry(r, r, y1 - y0, seg), m, x, (y0 + y1) / 2, z, { nopick });
+
+  function canvasTex(w, h, draw, nearest) {
+    const c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h);
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+    if (nearest) { t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; }
+    return t;
+  }
+  // A flat printed label. side up reads from the top; side down reads from below with the template's flip.
+  function decal(p, tex, x, y, z, w, h, side = "up") {
+    const g = new THREE.PlaneGeometry(w, h);
+    const u = new THREE.Vector3(side === "up" ? 1 : -1, 0, 0), v = new THREE.Vector3(0, 0, -1), n = new THREE.Vector3(0, side === "up" ? 1 : -1, 0);
+    const mesh = new THREE.Mesh(g, mat(p, { basic: true, map: tex }));
+    mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(u, v, n));
+    mesh.position.set(x, y, z); mesh.userData.part = p.id; p.group.add(mesh); return mesh;
+  }
+  const printText = (lines, w, h, opts = {}) => canvasTex(w, h, (ctx) => {
+    ctx.fillStyle = opts.color || "#f0f4ee"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = `600 ${opts.size || 28}px "Martian Mono", Menlo, monospace`;
+    lines.forEach(([txt, x, y, rot]) => { ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot); ctx.fillText(txt, 0, 0); ctx.restore(); });
+  });
+
+  /* ---------- Board ---------- */
+  const board = makePart("board", "board");
+  box(board, mat(board, { color: 0x175c40, rough: 0.86 }), 0, W, 0, 1.6, 0, H);
+  const padGeo = new THREE.RingGeometry(0.42, 0.92, 22), holeGeo = new THREE.CircleGeometry(0.46, 18);
+  const padMat = mat(board, { color: 0xaab0a9, metal: 0.9, rough: 0.46 }), holeMat = mat(board, { color: 0x06110e, rough: 1 });
+  [[1.606, -Math.PI / 2], [-0.006, Math.PI / 2]].forEach(([y, rx]) => {
+    const pg = padGeo.clone().rotateX(rx), hg = holeGeo.clone().rotateX(rx);
+    const a = new THREE.InstancedMesh(pg, padMat, COLS * ROWS), b = new THREE.InstancedMesh(hg, holeMat, COLS * ROWS);
+    const m = new THREE.Matrix4(); let i = 0;
+    for (let c = 1; c <= COLS; c++) for (let r = 1; r <= ROWS; r++) { m.setPosition(hx(c), y, hz(r)); a.setMatrixAt(i, m); b.setMatrixAt(i, m); i++; }
+    board.group.add(a, b);
+  });
+
+  // Column and row numbers around the board, always facing you, so holes can be counted from any side.
+  function textSprite(txt, h, color = "#c8dad5", weight = 500) {
+    const size = 64, pad = 8; const c = document.createElement("canvas"); const ctx = c.getContext("2d");
+    ctx.font = `${weight} ${size}px "Martian Mono", Menlo, monospace`;
+    c.width = Math.ceil(ctx.measureText(txt).width) + pad * 2; c.height = size + pad * 2;
+    ctx.font = `${weight} ${size}px "Martian Mono", Menlo, monospace`; ctx.fillStyle = color; ctx.textBaseline = "middle"; ctx.fillText(txt, pad, c.height / 2 + 2);
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false }));
+    s.scale.set(h * c.width / c.height, h, 1); return s;
+  }
+  const gridLabels = new THREE.Group(); scene.add(gridLabels);
+  const labelGrid = () => {
+    gridLabels.clear();
+    for (let c = 1; c <= COLS; c++) { const s = textSprite(String(c), 1.5); s.position.set(hx(c), 0.8, -1.5); gridLabels.add(s); }
+    for (let r = 1; r <= ROWS; r++) { const s = textSprite(String(r), 1.5); s.position.set(-1.7, 0.8, hz(r)); gridLabels.add(s); const t = textSprite(String(r), 1.5); t.position.set(W + 1.7, 0.8, hz(r)); gridLabels.add(t); }
+    const a = textSprite("12 o'clock", 1.9, "#f4ab3c"); a.position.set(W / 2, 0.8, -4.2); gridLabels.add(a);
+    const b = textSprite("6 o'clock", 1.9, "#f4ab3c"); b.position.set(W / 2, 0.8, H + 2.6); gridLabels.add(b);
+  };
+  labelGrid();
+
+  /* ---------- OLED (rotated: header at 6 o'clock) ---------- */
+  const OY = 4.14;  // underside of the module PCB, sitting on its header
+  const oled = makePart("oled", "oled");
+  box(oled, mat(oled, { color: 0x1a2f80, rough: 0.5 }), 0, 35.4, OY, OY + 1.2, 2.6, 36.1);
+  box(oled, mat(oled, { color: 0x08090c, rough: 0.14, metal: 0.2 }), 1.2, 34.2, OY + 1.2, OY + 2.7, 6, 29);
+  box(oled, mat(oled, { color: 0x15171a, rough: 0.6 }), hx(6) - 1.27, hx(9) + 1.27, 1.6, OY, hz(14) - 1.27, hz(14) + 1.27);
+  const gold = mat(oled, { color: 0xd9b45a, metal: 1, rough: 0.3 });
+  [6, 7, 8, 9].forEach((c) => add(oled, new THREE.BoxGeometry(0.64, OY + 1.5 + 1.2, 0.64), gold, hx(c), (OY + 1.2 - 1.5) / 2, hz(14)));
+  [[1.8, 4.2], [33.6, 4.2], [1.8, 34.5], [33.6, 34.5]].forEach(([x, z]) => cyl(oled, mat(oled, { color: 0xc9ccc4, metal: 0.9, rough: 0.35 }), x, OY + 1.2, OY + 1.23, z, 1.1));
+  const pinNames = ["SDA", "SCL", "GND", "VCC"];
+  decal(oled, printText(pinNames.map((n, i) => [n, 40 + i * 80, 30, Math.PI]), 320, 60, { size: 20 }), hx(6) + P * 1.5, OY + 1.215, hz(14) - 2.2, 10.16, 1.9);
+  const screenTex = canvasTex(128, 64, (ctx, w, h) => {
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h); ctx.fillStyle = "#fff"; ctx.textBaseline = "top";
+    ctx.font = "bold 30px Menlo, monospace"; ctx.fillText("12:41", 19, 6);
+    ctx.font = "10px Menlo, monospace"; ctx.fillText("FRI 06 NOV", 34, 36);
+    ctx.fillRect(104, 2, 15, 1); ctx.fillRect(104, 8, 15, 1); ctx.fillRect(104, 2, 1, 7); ctx.fillRect(118, 2, 1, 7); ctx.fillRect(119, 4, 1, 3);
+    for (let i = 0; i < 3; i++) ctx.fillRect(106 + i * 3, 4, 2, 3);
+    for (let x = 2; x < 126; x += 3) { const a = 2 + Math.abs(Math.sin(x * 0.19) * Math.sin(x * 0.051)) * 5; ctx.fillRect(x, 56 - a, 2, a * 2); }
+    const d = ctx.getImageData(0, 0, w, h); for (let i = 0; i < d.data.length; i += 4) { const v = d.data[i] > 110 ? 255 : 0; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; } ctx.putImageData(d, 0, 0);
+  }, true);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(29.42, 14.7).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: screenTex, transparent: true, toneMapped: false }));
+  screen.position.set(17.7, OY + 2.72, 16.8); screen.visible = false; oled.group.add(screen);
+
+  const oledCut = makePart("oledCut", "oled", { ghost: true });
+  [6, 7, 8, 9].forEach((c) => add(oledCut, new THREE.BoxGeometry(0.66, 2, 0.66), mat(oledCut, { color: CUT, emis: CUT, rough: 0.5, op: 0.95 }), hx(c), -2.5, hz(14)));
+
+  /* ---------- Buttons and slider ---------- */
+  function button(id, top) {
+    const p = makePart(id, "top"), cx = 41.91, cz = (hz(top) + hz(top + 3)) / 2;
+    box(p, mat(p, { color: 0x24272b, rough: 0.55 }), cx - 3, cx + 3, 1.6, 4.6, cz - 3, cz + 3);
+    box(p, mat(p, { color: 0xb8bcc0, metal: 0.95, rough: 0.35 }), cx - 2.9, cx + 2.9, 4.6, 4.85, cz - 2.9, cz + 2.9, false);
+    cyl(p, mat(p, { color: 0x32363a, rough: 0.5 }), cx, 4.85, 6.2, cz, 1.75, 24);
+    [[16, top], [18, top], [16, top + 3], [18, top + 3]].forEach(([c, r]) => cyl(p, mat(p, { color: 0xc4c7c2, metal: 0.95, rough: 0.35 }), hx(c), -0.25, 1.7, hz(r), 0.3, 8));
+    return p;
+  }
+  button("btnUp", 2); button("btnSel", 6); button("btnDown", 10);
+  const slider = makePart("slider", "top");
+  box(slider, mat(slider, { color: 0xc2c6c8, metal: 0.92, rough: 0.34 }), 37.56, 46.26, 1.6, 5, 32.44, 36.14);
+  box(slider, mat(slider, { color: 0x1a1c1f, rough: 0.5 }), 39.9, 42.9, 5, 8, 33.4, 35.2);
+  [16, 17, 18].forEach((c) => cyl(slider, mat(slider, { color: 0xc4c7c2, metal: 0.95, rough: 0.35 }), hx(c), -0.25, 1.7, hz(14), 0.33, 8));
+
+  /* ---------- ESP32-C6 SuperMini ---------- */
+  const ESP_Y = -2.54, ESP_FACE = -3.54, EZ0 = 20.21, EZ1 = 38.21;
+  const esp = makePart("esp", "esp");
+  box(esp, mat(esp, { color: 0x121519, rough: 0.48 }), 0, 25.6, ESP_FACE, ESP_Y, EZ0, EZ1);
+  const plastic = mat(esp, { color: 0x17191d, rough: 0.65 }), goldE = mat(esp, { color: 0xd9b45a, metal: 1, rough: 0.3 });
+  box(esp, plastic, 0, 25.4, ESP_Y, 0, hz(15) - 1.27, hz(15) + 1.27);
+  box(esp, plastic, 0, 25.4, ESP_Y, 0, hz(9) - 1.27, hz(9) + 1.27);
+  for (let c = 1; c <= 10; c++) {
+    add(esp, new THREE.BoxGeometry(0.64, 7.45, 0.64), goldE, hx(c), -0.125, hz(15));  // trimmed: 2 mm above the board
+    add(esp, new THREE.BoxGeometry(0.64, 5.02, 0.64), goldE, hx(c), -1.11, hz(9));    // stub: ends inside the board
+    [hz(15), hz(9)].forEach((z) => cyl(esp, goldE, hx(c), ESP_FACE - 0.04, ESP_FACE, z, 0.78, 14, true));
+  }
+  const usbMat = mat(esp, { color: 0xccd0d4, metal: 0.95, rough: 0.28 });
+  box(esp, usbMat, -1.5, 6, ESP_FACE - 3.15, ESP_FACE, 25.21, 33.21);
+  box(esp, mat(esp, { color: 0xb0b6b8, metal: 0.85, rough: 0.34 }), 10.5, 15.5, ESP_FACE - 0.85, ESP_FACE, 26.7, 31.7);
+  box(esp, mat(esp, { color: 0xd8cfa8, rough: 0.55 }), 21.6, 24.8, ESP_FACE - 1.1, ESP_FACE, 27.6, 30.8);
+  [[8, 24.6], [8, 33.8]].forEach(([x, z]) => box(esp, mat(esp, { color: 0xd9dbd6, metal: 0.6, rough: 0.4 }), x - 1.5, x + 1.5, ESP_FACE - 1.1, ESP_FACE, z - 1, z + 1, false));
+  decal(esp, printText([["ESP32-C6", 128, 28]], 256, 56, { size: 28 }), 13, ESP_FACE - 0.06, 24.2, 8.5, 1.9, "down");
+  [[26, 0], [29, 0]].forEach(([z]) => box(esp, goldE, 3.5, 5.5, ESP_Y, ESP_Y + 0.05, z - 0.9, z + 0.9, false));  // B+ and B- pads: an example position
+  const pinCut = makePart("pinCut", "esp", { ghost: true });
+  for (let c = 1; c <= 10; c++) {
+    add(pinCut, new THREE.BoxGeometry(0.66, 4.6, 0.66), mat(pinCut, { color: CUT, emis: CUT, rough: 0.5, op: 0.95 }), hx(c), 3.7, hz(9));
+    add(pinCut, new THREE.BoxGeometry(0.66, 2.4, 0.66), mat(pinCut, { color: CUT, emis: CUT, rough: 0.5, op: 0.95 }), hx(c), 4.8, hz(15));
+  }
+
+  /* ---------- Battery sense: two 100k resistors lying past the ESP32's far end ---------- */
+  const divider = makePart("divider", "wires");
+  const silver = mat(divider, { color: 0xc4c7c2, metal: 0.95, rough: 0.35 });
+  [21.5, 23.7].forEach((z) => {
+    add(divider, new THREE.CylinderGeometry(1.0, 1.0, 5.9, 16).rotateZ(Math.PI / 2), mat(divider, { color: 0xd9c39a, rough: 0.6 }), 29.55, -1.15, z, { edges: false });
+    [[27.4, 0x7a3e12], [28.2, 0x111111], [29.0, 0xe8b512], [31.6, 0xb89a4a]].forEach(([x, c]) =>  // brown, black, yellow, gold: 100k
+      add(divider, new THREE.CylinderGeometry(1.03, 1.03, 0.45, 16).rotateZ(Math.PI / 2), mat(divider, { color: c, rough: 0.5 }), x, -1.15, z, { nopick: true }));
+  });
+  add(divider, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([[32.5, 21.5], [33.4, 21.9], [33.7, 22.6], [33.4, 23.3], [32.5, 23.7]].map(([x, z]) => new THREE.Vector3(x, -1.15, z))), 20, 0.22, 6), silver, 0, 0, 0);
+
+  /* ---------- Tape and battery ---------- */
+  const kapM = (p) => mat(p, { color: 0xe2951e, rough: 0.28, op: 0.62 });
+  const kapOled = makePart("kapOled", "kap"); box(kapOled, kapM(kapOled), 11.5, 24, -1.78, -1.62, 32.6, 35.4);
+  const foam = makePart("foam", "foam"); box(foam, mat(foam, { color: 0xe6e2d6, rough: 0.95 }), 5, 32.5, -1.6, -0.95, 1, 18.6);
+  const posts = makePart("posts", "posts");
+  [[1, 1], [18, 1]].forEach(([c, r]) => cyl(posts, mat(posts, { color: 0xc9a227, metal: 0.9, rough: 0.36 }), hx(c), -7, 0, hz(r), 1.7, 6));
+  box(posts, mat(posts, { color: 0x2d3338, rough: 0.8 }), 27.5, 33.5, -7, 0, 25, 31);
+  const cell = makePart("cell", "cell");
+  const cellShape = new THREE.Shape(); const R = 1.2;
+  cellShape.moveTo(R, 0); cellShape.lineTo(30 - R, 0); cellShape.quadraticCurveTo(30, 0, 30, R); cellShape.lineTo(30, 19.8 - R); cellShape.quadraticCurveTo(30, 19.8, 30 - R, 19.8); cellShape.lineTo(R, 19.8); cellShape.quadraticCurveTo(0, 19.8, 0, 19.8 - R); cellShape.lineTo(0, R); cellShape.quadraticCurveTo(0, 0, R, 0);
+  const cellGeo = new THREE.ExtrudeGeometry(cellShape, { depth: 4.4, bevelEnabled: true, bevelThickness: 0.3, bevelSize: 0.3, bevelSegments: 2, curveSegments: 6 }).rotateX(Math.PI / 2);
+  const cellMesh = add(cell, cellGeo, mat(cell, { color: 0xb9bfc2, metal: 0.72, rough: 0.46 }), 4, -1.9, 0, { edges: false });
+  decal(cell, printText([["502030  3.7 V", 256, 40], ["+ AND − FROM THE TABS", 256, 90]], 512, 128, { size: 28, color: "#14282c" }), 19, -6.68, 9.9, 16, 4, "down");
+  [[7, 0xd8dbd7], [13, 0xd8dbd7]].forEach(([z, c]) => box(cell, mat(cell, { color: c, metal: 0.9, rough: 0.3 }), 33.8, 35.2, -4.2, -4, z - 1.1, z + 1.1, false));
+
+  /* ---------- Wires: rebuilt when expand changes, so their ends stay on their pads ---------- */
+  const wires = {};
+  const B = (c, r, y = -0.03) => [hx(c), y, hz(r), "board"];
+  const L = (x, y, z) => [x, y, z, "wires"];
+  const lane = (a, b, y, bow = 0) => [B(a[0], a[1]), L(hx(a[0]), y, hz(a[1])), L((hx(a[0]) + hx(b[0])) / 2, y, (hz(a[1]) + hz(b[1])) / 2 + bow), L(hx(b[0]), y, hz(b[1])), B(b[0], b[1])];
+  const T = (x, y, z) => [x, y, z, "board"];            // on the board's top face
+  const oledLink = (c, to, h, z) => [[hx(c), 5.55, hz(14), "oled"], [hx(c) - 1.1, h, z, "oled"], [hx(to) + 1.4, h, z + 0.4, "oled"], [hx(to) + 0.15, 4.3, 36.9, "oled"], T(hx(to), 2.75, hz(15))];
+  // leg underneath -> lane beside the battery -> up through a free hole -> along the 6 o'clock edge on top -> pin
+  const btnWire = (legRow, laneX, turnZ, via, to, edgeZ, edgeY) => [B(16, legRow), L(laneX, -0.6, hz(legRow) + 1.6), L(laneX, -0.6, turnZ), L(hx(via), -0.6, turnZ),
+    T(hx(via), -0.05, hz(15)), T(hx(via), 1.7, hz(15)), T(hx(via) - 0.9, edgeY, edgeZ), T(hx(to) + 0.9, edgeY, edgeZ), T(hx(to), 2.75, hz(15))];
+  const byId = Object.fromEntries(WIRING.map((w) => [w.id, w]));
+  const viaOf = (id) => byId[id].via[0], toOf = (id) => byId[id].to[0];
+  const ROUTE = {
+    w_sda: [[hx(6), 5.55, hz(14), "oled"], [hx(6) - 0.7, 5.5, 35.9, "oled"], [hx(toOf("w_sda")) + 0.2, 4.3, 36.9, "oled"], T(hx(toOf("w_sda")), 2.75, hz(15))],
+    w_scl: oledLink(7, toOf("w_scl"), 5.75, 35.8), w_gnd: oledLink(8, toOf("w_gnd"), 6.1, 35.5), w_vcc: oledLink(9, toOf("w_vcc"), 6.45, 35.2),
+    w_up: btnWire(2, 35.2, 33.0, viaOf("w_up"), toOf("w_up"), 37.5, 2.0),
+    w_sel: btnWire(6, 36.4, 34.2, viaOf("w_sel"), toOf("w_sel"), 37.95, 2.0),
+    w_down: btnWire(10, 37.6, 35.4, viaOf("w_down"), toOf("w_down"), 37.72, 2.5),
+    w_g1: lane([18, 5], [18, 9], -0.45), w_g2: lane([18, 9], [18, 13], -0.45),
+    // the battery wires leave the ESP32 below the spacer; the resistor legs leave above it
+    w_padm: [[4.5, ESP_Y + 0.05, 29, "esp"], [9, ESP_Y + 0.35, 30.2, "esp"], [23.5, ESP_Y + 0.35, 31.9, "esp"], L(27.5, -2.0, 32.4), L(42.6, -2.0, 32.4), B(18, 13)],
+    w_padp: [[4.5, ESP_Y + 0.05, 26, "esp"], [9, ESP_Y + 0.35, 27.6, "esp"], [23.5, ESP_Y + 0.35, 31.1, "esp"], L(27.5, -1.5, 31.6), L(40.6, -1.5, 31.6), L(42.6, -1.2, 33.6), B(18, 14)],
+    w_rp: [[4.5, ESP_Y + 0.05, 26, "esp"], [12, ESP_Y + 0.9, 24.8, "esp"], [24.6, ESP_Y + 0.9, 23.6, "esp"], L(26.0, -1.15, 21.9), L(26.6, -1.15, 21.5)],
+    w_rm: [[4.5, ESP_Y + 0.05, 29, "esp"], [12, ESP_Y + 0.9, 27.2, "esp"], [24.6, ESP_Y + 0.9, 24.9, "esp"], L(26.0, -1.15, 24.0), L(26.6, -1.15, 23.7)],
+    w_sense: [L(33.7, -1.15, 22.6), L(34.6, -1.8, 21.6), L(34.6, -2.6, 20.6), [26.8, ESP_FACE - 0.4, 20.5, "esp"], [23, ESP_FACE - 0.4, 20.9, "esp"], [hx(9), ESP_FACE - 0.12, hz(9), "esp"]],
+    w_batm: [[34.9, -4.1, 13, "cell"], [36.5, -3.4, 13.6, "cell"], L(41.0, -1.0, 15.5), L(41.0, -0.9, 30.2), B(18, 13)],
+    w_batp: [[34.9, -4.1, 7, "cell"], [36.5, -3.4, 7.8, "cell"], L(42.8, -0.9, 10), L(42.8, -0.8, 32.8), B(17, 14)],
+  };
+  Object.keys(WIRE).forEach((id) => {
+    const p = makePart(id, "none", { wire: true });
+    const m = new THREE.MeshStandardMaterial({ color: WIRE[id].color, roughness: 0.92, envMapIntensity: 0.25, emissive: WIRE[id].color, emissiveIntensity: 0.3, transparent: false, toneMapped: false });  // the colours are how you tell wires apart
+    m.userData = { base: 1, baseEmis: m.emissive.clone(), baseEI: 0.3, wire: true };
+    p.mats.set("wire", m);
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), m); mesh.userData.part = id; p.group.add(mesh); pickables.push(mesh);
+    wires[id] = { p, mesh };
+  });
+  function buildWires(e) {
+    Object.keys(wires).forEach((id) => {
+      const pts = ROUTE[id].map(([x, y, z, l]) => new THREE.Vector3(x, y + LAY[l] * e, z));
+      const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "centripetal"), 44, 0.27, 7, false);
+      wires[id].mesh.geometry.dispose(); wires[id].mesh.geometry = g;
+    });
+  }
+
+  /* ---------- Leader lines show where each layer drops back into place ---------- */
+  const LEADS = [
+    ...[6, 9].map((c) => ["oled", hx(c), hz(14), 0, 1.6]),
+    ...[[0, 2.6], [35.4, 2.6]].map(([x, z]) => ["oled", x, z, 0, OY]),
+    ...["btnUp", "btnSel", "btnDown"].flatMap((id, i) => [["top", hx(16), hz(2 + i * 4), 1.6, 1.6, id], ["top", hx(18), hz(5 + i * 4), 1.6, 1.6, id]]),
+    ["top", hx(16), hz(14), 1.6, 1.6, "slider"], ["top", hx(18), hz(14), 1.6, 1.6, "slider"],
+    ...[1, 10].flatMap((c) => [["esp", hx(c), hz(15), 0, 0], ["esp", hx(c), hz(9), 0, 0]]),
+    ["posts", hx(1), hz(1), 0, 0, "posts"], ["posts", hx(18), hz(1), 0, 0, "posts"],
+    ["cell", 4, 0, 0, -1.6], ["cell", 34, 0, 0, -1.6], ["cell", 4, 19.8, 0, -1.6], ["cell", 34, 19.8, 0, -1.6],
+  ];
+  LEADS.forEach((l) => { if (l[0] === "oled") l[5] = "oled"; if (l[0] === "esp") l[5] = "esp"; if (l[0] === "cell") l[5] = "cell"; });
+  const leadPos = new Float32Array(LEADS.length * 6);
+  const leadGeo = new THREE.BufferGeometry(); leadGeo.setAttribute("position", new THREE.BufferAttribute(leadPos, 3));
+  const leadMat = new THREE.LineBasicMaterial({ color: 0xf4ab3c, transparent: true, opacity: 0, depthWrite: false });
+  const leads = new THREE.LineSegments(leadGeo, leadMat); leads.frustumCulled = false; scene.add(leads);
+  function updateLeads(e) {
+    LEADS.forEach(([lay, x, z, y0, y1, id], i) => {
+      const on = isVisible(parts[id]) && e > 0.02, o = i * 6;
+      const yBoard = y0, yPart = y1 + LAY[lay] * e;
+      leadPos[o] = x; leadPos[o + 1] = yBoard; leadPos[o + 2] = z;
+      leadPos[o + 3] = x; leadPos[o + 4] = on ? yPart : yBoard; leadPos[o + 5] = z;
+    });
+    leadGeo.attributes.position.needsUpdate = true;
+    leadMat.opacity = Math.min(0.42, e * 2);
+  }
+
+  /* ---------- Solder joints and markers ---------- */
+  const jointGeo = new THREE.SphereGeometry(0.92, 16, 10);
+  const jointMat = new THREE.MeshStandardMaterial({ color: 0xe0e3dc, metalness: 0.95, roughness: 0.2 });
+  const joints = [];
+  const seen = new Set();
+  STEPS.forEach((s, i) => (s.solder || []).forEach((j) => {
+    const k = j.x.toFixed(2) + "," + j.y.toFixed(2) + "," + j.z.toFixed(2);
+    if (seen.has(k)) return; seen.add(k);
+    const m = new THREE.Mesh(jointGeo, jointMat); m.scale.set(j.side === "pad" ? 0.7 : 1, 0.42, j.side === "pad" ? 0.7 : 1);
+    scene.add(m); joints.push({ mesh: m, j, step: i });
+  }));
+  const ringTex = canvasTex(96, 96, (ctx) => { ctx.strokeStyle = "#f4ab3c"; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(48, 48, 40, 0, Math.PI * 2); ctx.stroke(); });
+  const ringMat = new THREE.SpriteMaterial({ map: ringTex, transparent: true, depthTest: false, depthWrite: false, toneMapped: false });
+  const rings = [], pinEls = [];
+  const pinLayer = $("#pins");
+  function activeMarks() { if (mode !== "step" || selected) return []; const s = STEPS[cur]; return [...(s.solder || []), ...(s.marks || [])]; }
+  function layoutMarks() {
+    const list = activeMarks();
+    while (rings.length < list.length) { const r = new THREE.Sprite(ringMat); r.renderOrder = 20; scene.add(r); rings.push(r); }
+    while (pinEls.length < list.length) { const d = document.createElement("div"); d.className = "pin"; pinLayer.appendChild(d); pinEls.push(d); }
+    rings.forEach((r, i) => (r.visible = i < list.length));
+    pinEls.forEach((d, i) => { d.hidden = i >= list.length || !(list[i] && list[i].name); if (list[i]) d.textContent = list[i].name; });
+  }
+
+  /* ---------- State ---------- */
+  const isVisible = (p) => {
+    if (!p || p.hidden) return false;
+    if (mode === "all") return !p.ghost;
+    if (p.ghost) return (STEPS[cur].ghosts || []).includes(p.id);
+    return cur >= (whenAdded[p.id] === undefined ? 0 : whenAdded[p.id]);
+  };
+  let hover3D = null;
+  function refreshFocus() {
+    const s = STEPS[cur], set = new Set(selected ? [selected] : rowHover ? [rowHover] : mode === "step" ? s.focus : []);
+    const isolating = !!(selected || rowHover);
+    const quiet = isolating ? 0.11 : 0.38;
+    Object.values(parts).forEach((p) => {
+      const vis = isVisible(p); p.group.visible = vis;
+      const inSet = set.has(p.id);
+      p.ta = p.id === "board" || !set.size || inSet ? 1 : quiet;
+      p.th = inSet ? 1 : hover3D === p.id ? 0.55 : 0;
+    });
+    joints.forEach(({ mesh, step }) => (mesh.visible = mode === "all" || cur >= step));
+    screen.visible = mode === "all" || cur >= STEPS.findIndex((x) => x.screen);
+    layoutMarks();
+    document.querySelectorAll(".lrow").forEach((el) => {
+      const id = el.dataset.part, p = parts[id];
+      el.classList.toggle("sel", selected === id);
+      el.classList.toggle("later", !isVisible(p) && !p.hidden);
+      const e = el.querySelector(".eye"), shown = String(!p.hidden);
+      if (e.getAttribute("aria-pressed") !== shown) {  // only when it changes: swapping the icon mid-click would lose the click
+        e.setAttribute("aria-pressed", shown); e.innerHTML = p.hidden ? eyeOff : eyeOn;
+        e.setAttribute("aria-label", (p.hidden ? "Show " : "Hide ") + el.querySelector(".pick span:last-child").textContent);
+      }
+    });
+  }
+  function select(id) {
+    selected = id; const c = $("#card");
+    if (!id) { c.dataset.off = "true"; refreshFocus(); return; }
+    const w = WIRE[id];
+    $("#cardT").textContent = w ? w.label : NAMES[id][0];
+    $("#cardD").textContent = w ? w.where + ". " + (w.what === w.label ? "" : w.what) : NAMES[id][1];
+    const links = w ? [] : Object.values(WIRE).filter((x) => x.links.includes(id));
+    $("#cardL").innerHTML = links.map((x) => `<li>${x.label}</li>`).join("");
+    c.dataset.off = "false"; refreshFocus();
+  }
+
+  /* ---------- Camera ---------- */
+  const VIEWS = {
+    angle: [1.02, -0.62], top: [0.015, 0], under: [Math.PI - 0.015, Math.PI], side: [Math.PI / 2, 0],
+    topFront: [0.72, 0.1], underAngle: [2.2, Math.PI - 0.5], underAngle2: [2.35, Math.PI + 0.75], gap: [1.22, -1.05],
+  };
+  let usable = 0.75;
+  const CENTER = () => [W / 2 - 0.4, H / 2];
+  const center = new THREE.Vector3();
+  let goal = { polar: 1, az: 0, zoom: 1, look: null, autoframe: true };
+  let tween = null, eNow = reduced ? 0 : 0.9, eGoal = 0, eDragging = false, firstSettle = !reduced;
+  function extents(e) { return [TOP_Y + TOP_X * e, BOTTOM_Y - BOTTOM_X * e]; }
+  function fitDistance(e, polar, zoom) {
+    const [t, b] = extents(e), hy = (t - b) / 2 * Math.abs(Math.sin(polar));
+    const r = Math.sqrt(30 * 30 + 23 * 23 + hy * hy);
+    const full = Math.tan(FOV * Math.PI / 360), v = 2 * Math.atan(full * usable), h = 2 * Math.atan(full * camera.aspect);
+    return r / Math.sin(Math.min(v, h) / 2) * 0.86 / zoom;
+  }
+  function goalTarget(e) {
+    const [t, b] = extents(e), [cx, cz] = goal.look || CENTER();
+    return center.set(cx, (t + b) / 2 * (goal.look ? 0.5 : 1), cz);
+  }
+  function currentSph() {
+    const o = camera.position.clone().sub(controls.target), d = o.length();
+    return { d, polar: Math.acos(Math.max(-1, Math.min(1, o.y / d))), az: Math.atan2(o.x, o.z) };
+  }
+  function setCam(polar, az, d, tgt) {
+    controls.target.copy(tgt);
+    camera.position.set(tgt.x + d * Math.sin(polar) * Math.sin(az), tgt.y + d * Math.cos(polar), tgt.z + d * Math.sin(polar) * Math.cos(az));
+  }
+  const easeIO = (t) => (t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2);
+  function goView(name, opt = {}) {
+    const v = VIEWS[name] || VIEWS.angle, roomy = stage.clientWidth > 620;
+    goal = { polar: v[0], az: v[1], zoom: roomy && opt.zoom || 1, look: roomy && opt.look || null, autoframe: true };
+    document.querySelectorAll("#views button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === name)));
+    if (reduced || opt.instant) { setCam(goal.polar, goal.az, fitDistance(eGoal, goal.polar, goal.zoom), goalTarget(eGoal)); tween = null; return; }
+    const s = currentSph(); let dAz = goal.az - s.az;
+    while (dAz > Math.PI) dAz -= Math.PI * 2; while (dAz < -Math.PI) dAz += Math.PI * 2;
+    tween = { t: 0, dur: 0.62, p0: s.polar, a0: s.az, dAz, d0: s.d, tgt0: controls.target.clone() };
+  }
+  function userTookCamera() { tween = null; document.querySelectorAll("#views button").forEach((b) => b.setAttribute("aria-pressed", "false")); }
+  controls.addEventListener("start", () => { userTookCamera(); $("#gl").classList.add("grabbing"); });
+  controls.addEventListener("end", () => $("#gl").classList.remove("grabbing"));
+  const stopAuto = () => (goal.autoframe = false);
+  renderer.domElement.addEventListener("wheel", stopAuto, { passive: true });
+  renderer.domElement.addEventListener("touchstart", (e) => { if (e.touches.length > 1) stopAuto(); }, { passive: true });
+  renderer.domElement.addEventListener("contextmenu", stopAuto);
+
+  /* ---------- Expand ---------- */
+  const ex = $("#expand");
+  function showExpand(e) {
+    ex.style.setProperty("--v", e * 100 + "%");
+    $("#xpOut").textContent = (TOP_Y + TOP_X * e - BOTTOM_Y + BOTTOM_X * e).toFixed(0) + " mm tall";
+  }
+  function setExpand(e, fromUser) {
+    eGoal = Math.max(0, Math.min(1, e)); if (!fromUser) ex.value = Math.round(eGoal * 100); showExpand(eGoal);
+  }
+  ex.addEventListener("pointerdown", () => { eDragging = true; firstSettle = false; });
+  addEventListener("pointerup", () => (eDragging = false));
+  ex.addEventListener("input", () => { firstSettle = false; let v = +ex.value / 100; if (v < 0.015) v = 0; if (v > 0.985) v = 1; setExpand(v, true); });
+
+  function applyExplode(e) {
+    Object.values(parts).forEach((p) => (p.group.position.y = LAY[p.layer] * e));
+    joints.forEach(({ mesh, j }) => mesh.position.set(j.x, j.y + LAY[j.layer] * e, j.z));
+    buildWires(e); updateLeads(e);
+  }
+
+  /* ---------- Hover and click ---------- */
+  const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let pointer = null, down = null, needPick = false;
+  const stage = $("#stage"), tip = $("#tip"), gl = $("#gl");
+  const fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const holeNames = {};
+  STEPS.forEach((s) => [...(s.solder || []), ...(s.marks || [])].forEach((j) => { if (j.key && j.name) holeNames[j.key] = j.name; }));
+  function pick(px, py) {
+    const r = stage.getBoundingClientRect();
+    ptr.set((px - r.left) / r.width * 2 - 1, -((py - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ptr, camera);
+    const list = pickables.filter((m) => m.parent.visible && parts[m.userData.part].a > 0.2);
+    return ray.intersectObjects(list, false)[0] || null;
+  }
+  function holeAt(hit) {
+    const c = Math.round((hit.point.x - 1.27) / P) + 1, r = Math.round((hit.point.z - 1.27) / P) + 1;
+    if (c < 1 || c > COLS || r < 1 || r > ROWS) return null;
+    return { key: `c${c} r${r}`, near: Math.hypot(hit.point.x - hx(c), hit.point.z - hz(r)) < 1.15 };
+  }
+  function showTip(hit, x, y) {
+    const r = stage.getBoundingClientRect(); const id = hit.object.userData.part;
+    let main = WIRE[id] ? WIRE[id].label : NAMES[id] ? NAMES[id][0] : id, sub = WIRE[id] ? WIRE[id].where : "";
+    if (id === "board") { const h = holeAt(hit); if (h && h.near) { main = h.key; sub = holeNames[h.key] || "Not used"; } }
+    tip.innerHTML = main + (sub ? `<small>${sub}</small>` : "");
+    tip.classList.add("on");
+    const w = tip.offsetWidth, tx = Math.min(x - r.left + 14, r.width - w - 8), ty = Math.max(y - r.top - 36, 8);
+    tip.style.transform = `translate(${tx}px, ${ty}px)`;
+  }
+  gl.addEventListener("pointermove", (e) => { pointer = [e.clientX, e.clientY]; needPick = fine; });
+  gl.addEventListener("pointerleave", () => { pointer = null; tip.classList.remove("on"); if (hover3D) { hover3D = null; refreshFocus(); } gl.classList.remove("over"); });
+  gl.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY, performance.now()]; tip.classList.remove("on"); });
+  gl.addEventListener("pointerup", (e) => {
+    if (!down) return; const moved = Math.hypot(e.clientX - down[0], e.clientY - down[1]); const quick = performance.now() - down[2] < 450; down = null;
+    if (moved > 5 || !quick) return;
+    const hit = pick(e.clientX, e.clientY); select(hit ? (hit.object.userData.part === selected ? null : hit.object.userData.part) : null);
+  });
+
+  $("#now").addEventListener("pointerover", (e) => { const b = e.target.closest(".row"); const next = b ? b.dataset.part : null; if (next !== rowHover) { rowHover = next; refreshFocus(); } });
+  $("#now").addEventListener("pointerleave", () => { rowHover = null; refreshFocus(); });
+  $("#now").addEventListener("click", (e) => { const b = e.target.closest(".row"); if (b) select(selected === b.dataset.part ? null : b.dataset.part); });
+  [$("#lparts"), $("#lwires")].forEach((ul) => {
+    ul.addEventListener("pointerover", (e) => { const li = e.target.closest(".lrow"); const next = li && isVisible(parts[li.dataset.part]) ? li.dataset.part : null; if (next !== rowHover && fine) { rowHover = next; refreshFocus(); } });
+    ul.addEventListener("pointerleave", () => { rowHover = null; refreshFocus(); });
+    ul.addEventListener("click", (e) => {
+      const li = e.target.closest(".lrow"); if (!li) return; const id = li.dataset.part, p = parts[id];
+      if (e.target.closest(".eye")) { p.hidden = !p.hidden; if (p.hidden && selected === id) select(null); refreshFocus(); updateLeads(eNow); return; }
+      if (p.hidden) { p.hidden = false; }
+      if (!isVisible(p)) setStep(whenAdded[id], { keepSel: true });
+      select(selected === id ? null : id);
+    });
+  });
+  $("#cardX").addEventListener("click", () => select(null));
+
+  function setMode(m) {
+    mode = m; $("#mStep").setAttribute("aria-pressed", String(m === "step")); $("#mAll").setAttribute("aria-pressed", String(m === "all"));
+    select(null); refreshFocus(); updateLeads(eNow);
+  }
+  $("#mStep").addEventListener("click", () => setMode("step"));
+  $("#mAll").addEventListener("click", () => setMode("all"));
+  $("#views").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) goView(b.dataset.view); });
+
+  addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "Escape") { select(null); return; }
+    if (e.target === ex && (e.key.startsWith("Arrow") || e.key === "Home" || e.key === "End")) return;
+    if (e.key === "ArrowRight") setStep(cur + 1, { kb: true });
+    else if (e.key === "ArrowLeft") setStep(cur - 1, { kb: true });
+    else if (e.key === "e" || e.key === "E") setExpand(eGoal > 0.5 ? 0 : 1);
+    else if (["1", "2", "3", "4"].includes(e.key)) goView(["angle", "top", "under", "side"][+e.key - 1]);
+  });
+
+  onStateChange = (_, opt) => {
+    if (mode !== "step") { mode = "step"; $("#mStep").setAttribute("aria-pressed", "true"); $("#mAll").setAttribute("aria-pressed", "false"); }
+    if (!opt.keepSel) select(null);
+    const s = STEPS[cur]; firstSettle = false; setExpand(s.x); goView(s.view, { zoom: s.zoom, look: s.look }); refreshFocus(); updateLeads(eNow);
+  };
+
+  /* ---------- Size ---------- */
+  function resize() {
+    const r = stage.getBoundingClientRect(); renderer.setSize(r.width, r.height, false);
+    const h = Math.max(r.height, 1), topPad = $(".top").offsetHeight + 20, botPad = $(".xp").offsetHeight + 22;
+    usable = Math.max(0.4, (h - topPad - botPad) / h);
+    camera.aspect = r.width / h;
+    camera.setViewOffset(r.width, h, 0, (botPad - topPad) / 2, r.width, h);  // centres the model in the space between the controls
+    camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage); resize();
+
+  /* ---------- Frame ---------- */
+  const accentColor = new THREE.Color(ACCENT), worldPos = new THREE.Vector3(); let last = performance.now(), lastBuilt = -1, clock = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min((now - last) / 1000, 0.05); last = now; clock += dt;
+
+    const tau = firstSettle ? 0.34 : eDragging ? 0.05 : 0.15;
+    eNow += (eGoal - eNow) * (reduced ? 1 : 1 - Math.exp(-dt / tau));
+    if (Math.abs(eGoal - eNow) < 0.0006) { eNow = eGoal; firstSettle = false; }
+    if (Math.abs(eNow - lastBuilt) > 1e-5) { applyExplode(eNow); lastBuilt = eNow; }
+
+    const k = reduced ? 1 : 1 - Math.exp(-dt / 0.07);
+    Object.values(parts).forEach((p) => {
+      if (Math.abs(p.a - p.ta) < 0.002 && Math.abs(p.h - p.th) < 0.002) { if (p.a === p.ta && p.h === p.th) return; p.a = p.ta; p.h = p.th; }
+      else { p.a += (p.ta - p.a) * k; p.h += (p.th - p.h) * k; }
+      p.mats.forEach((m) => {
+        const u = m.userData;
+        m.opacity = u.base * p.a;
+        const see = p.a < 0.995 || u.base < 1 || u.basic; if (m.transparent !== see) { m.transparent = see; m.needsUpdate = true; }
+        m.depthWrite = !u.basic && p.a > 0.8 && u.base >= 1;
+        if (u.basic) return;
+        if (u.wire) { m.emissiveIntensity = u.baseEI + 0.2 * p.h; return; }
+        if (p.ghost) { m.emissiveIntensity = 0.4 + 0.25 * Math.sin(clock * 5); return; }
+        m.emissive.copy(u.baseEmis).lerp(accentColor, p.h); m.emissiveIntensity = u.baseEI + 0.05 * p.h;
+      });
+      if (p.edgeMat) { p.edgeMat.opacity = (0.2 + 0.8 * p.h) * p.a; p.edgeMat.color.setHex(p.h > 0.3 ? ACCENT : 0xeef3ea); }
+    });
+
+    if (tween) {
+      tween.t = Math.min(1, tween.t + dt / tween.dur); const q = easeIO(tween.t);
+      const d = tween.d0 + (fitDistance(eGoal, goal.polar, goal.zoom) - tween.d0) * q;
+      const tgt = tween.tgt0.clone().lerp(goalTarget(eGoal), q);
+      setCam(tween.p0 + (goal.polar - tween.p0) * q, tween.a0 + tween.dAz * q, d, tgt);
+      if (tween.t >= 1) tween = null;
+    } else if (goal.autoframe) {
+      const s = currentSph(), want = fitDistance(eNow, s.polar, goal.zoom), g = goalTarget(eNow);
+      const kk = reduced ? 1 : 1 - Math.exp(-dt / 0.12);
+      controls.target.lerp(g, kk);
+      const o = camera.position.clone().sub(controls.target).setLength(s.d + (want - s.d) * kk);
+      camera.position.copy(controls.target).add(o);
+    }
+    controls.update();
+
+    const list = activeMarks(), r = stage.getBoundingClientRect();
+    list.forEach((j, i) => {
+      worldPos.set(j.x, j.y + LAY[j.layer] * eNow, j.z);
+      const dist = camera.position.distanceTo(worldPos);
+      const base = dist * 0.0155 * (reduced ? 1 : 1 + 0.14 * Math.sin(clock * 3.2 + i * 0.5));
+      rings[i].position.copy(worldPos); rings[i].scale.set(base, base, 1);
+      const el = pinEls[i]; if (el.hidden) return;
+      worldPos.project(camera);
+      const x = (worldPos.x + 1) / 2 * r.width, y = (1 - worldPos.y) / 2 * r.height;
+      const off = i % 2 ? 11 : -26;
+      el.style.transform = `translate(${x - el.offsetWidth / 2}px, ${y + off}px)`;
+    });
+
+    if (needPick && pointer && !down) {
+      needPick = false;
+      const hit = pick(pointer[0], pointer[1]);
+      const id = hit ? hit.object.userData.part : null;
+      gl.classList.toggle("over", !!id);
+      if (hit) showTip(hit, pointer[0], pointer[1]); else tip.classList.remove("on");
+      if (id !== hover3D) { hover3D = id; refreshFocus(); }
+    }
+
+    const dd = camera.position.distanceTo(controls.target);
+    $("#scaleBar").style.width = 10 * r.height / (2 * dd * Math.tan(FOV * Math.PI / 360)) + "px";
+    renderer.render(scene, camera);
+  }
+
+  /* ---------- Start ---------- */
+  const s0 = STEPS[cur];
+  setExpand(s0.x);
+  goal = { polar: VIEWS[s0.view][0], az: VIEWS[s0.view][1], zoom: stage.clientWidth > 620 && s0.zoom || 1, look: stage.clientWidth > 620 && s0.look || null, autoframe: true };
+  setCam(goal.polar, goal.az, fitDistance(eNow, goal.polar, goal.zoom), goalTarget(eNow));
+  document.querySelectorAll("#views button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === s0.view)));
+  refreshFocus(); applyExplode(eNow); lastBuilt = eNow;
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(labelGrid);
+  requestAnimationFrame(frame);
+})();
+</script>
